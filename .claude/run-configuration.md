@@ -137,35 +137,11 @@ Warnings approved as acceptable:
 
 ### Lessons Learned
 
-**1. README-specific Standards** (root/)
-- Discovery: AsciiDoc validator applies `:toc: left` universally, but `readme-structure.adoc` requires `:toc: macro` for READMEs
-- Improvement: Validators should distinguish file types (README vs. general docs)
-- Impact: Prevents false positives in README validation
+All previous lessons have been applied to:
+- Lessons 1-5: Applied to `~/git/cui-llm-rules/claude/marketplace/skills/cui-documentation/SKILL.md` (2025-10-27)
+- Lesson 6: Applied to `~/.claude/commands/docs-technical-adoc-review.md` (2025-10-27)
 
-**2. Irrelevant RFC References** (doc/faq/)
-- Discovery: Found pattern of copy-pasted irrelevant RFC references (RFC 7540/HTTP2, RFC 7230/HTTP1.1 in JWT docs)
-- Improvement: Add RFC relevance verification when claims use "per RFC"
-- Impact: Prevents factual errors about specification requirements
-
-**3. Configuration Placeholder Clarity** (doc/faq/)
-- Discovery: Users copy-paste configuration without understanding placeholders
-- Improvement: All config examples should identify placeholders in comments
-- Impact: Reduces user configuration errors
-
-**4. Marketing Language Detection** (oauth-sheriff-core/)
-- Discovery: Marketing tone hides in adjectives like "comprehensive," "powerful," "seamless" and bold promotional formatting
-- Improvement: Add pattern detection for marketing adjectives in review workflow
-- Impact: More consistent tone detection across all documentation
-
-**5. Broken Cross-Reference Handling** (oauth-sheriff-core/)
-- Discovery: Link verification passes syntactically valid references to non-existent files
-- Improvement: Distinguish "target exists" vs. "syntax valid but target missing"
-- Impact: Catch references to planned-but-uncreated documentation
-
-**6. Validator False Positives** (quarkus-parent/, benchmarking/)
-- Discovery: Validator script produces "integer expression expected" bash warnings (not real issues)
-- Improvement: Filter `/line [0-9]+: \[: .*: integer expression expected/` from output
-- Impact: Cleaner validation output, faster reviews
+(New lessons will be added here as they are discovered)
 
 ## setup-project-permissions
 
