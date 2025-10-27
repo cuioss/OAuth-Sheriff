@@ -3,8 +3,8 @@
 ## ./mvnw -Ppre-commit clean install
 
 ### Last Execution Duration
-- **Duration**: 570000ms (9 minutes 30 seconds)
-- **Last Updated**: 2025-10-14
+- **Duration**: 477000ms (7 minutes 57 seconds)
+- **Last Updated**: 2025-10-27
 
 ### Acceptable Warnings
 - `[INFO] /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/target/generated-sources/annotations/de/cuioss/sheriff/oauth/core/json/_JwkKey_DslJsonConverter.java: Einige Eingabedateien verwenden nicht geprüfte oder unsichere Vorgänge.` (unchecked operations warning in generated DSL-JSON code)

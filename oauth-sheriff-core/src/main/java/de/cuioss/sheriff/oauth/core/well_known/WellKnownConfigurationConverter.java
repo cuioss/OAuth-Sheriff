@@ -16,7 +16,8 @@
 package de.cuioss.sheriff.oauth.core.well_known;
 
 import com.dslplatform.json.DslJson;
-import de.cuioss.http.client.converter.HttpContentConverter;
+import de.cuioss.http.client.ContentType;
+import de.cuioss.http.client.converter.HttpResponseConverter;
 import de.cuioss.sheriff.oauth.core.JWTValidationLogMessages;
 import de.cuioss.sheriff.oauth.core.exception.TokenValidationException;
 import de.cuioss.sheriff.oauth.core.json.WellKnownResult;
@@ -41,7 +42,7 @@ import java.util.Optional;
  * @author Oliver Wolff
  * @since 1.0
  */
-public class WellKnownConfigurationConverter implements HttpContentConverter<WellKnownResult> {
+public class WellKnownConfigurationConverter implements HttpResponseConverter<WellKnownResult> {
 
     private static final CuiLogger LOGGER = new CuiLogger(WellKnownConfigurationConverter.class);
 
@@ -145,6 +146,10 @@ public class WellKnownConfigurationConverter implements HttpContentConverter<Wel
         return HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8);
     }
 
+    @Override
+    public ContentType contentType() {
+        return ContentType.APPLICATION_JSON;
+    }
 
     /**
      * Determines if an IOException is caused by a DSL-JSON security limit violation.
@@ -157,10 +162,5 @@ public class WellKnownConfigurationConverter implements HttpContentConverter<Wel
                 errorMessage.contains("limit") ||
                 errorMessage.contains("too large") ||
                 errorMessage.contains("exceeded");
-    }
-
-    @Override
-    public WellKnownResult emptyValue() {
-        return WellKnownResult.EMPTY;
     }
 }

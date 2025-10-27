@@ -15,7 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.producer;
 
-import de.cuioss.http.client.retry.RetryStrategy;
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
 import de.cuioss.sheriff.oauth.core.ParserConfig;
 import de.cuioss.sheriff.oauth.core.TokenValidator;
@@ -52,7 +52,7 @@ import static de.cuioss.sheriff.oauth.quarkus.OAuthSheriffQuarkusLogMessages.INF
  * <ul>
  *   <li>{@link TokenValidator} - Main JWT validation component (includes SecurityEventCounter)</li>
  *   <li>{@link List}&lt;{@link IssuerConfig}&gt; - Resolved issuer configurations</li>
- *   <li>{@link RetryStrategy} - HTTP retry strategy for resilient operations</li>
+ *   <li>{@link SecurityEventCounter} - Security event counter for monitoring</li>
  * </ul>
  *
  * @since 1.0
@@ -76,10 +76,6 @@ public class TokenValidatorProducer {
     @ApplicationScoped
     SecurityEventCounter securityEventCounter;
 
-    @Produces
-    @ApplicationScoped
-    RetryStrategy retryStrategy;
-
     @SuppressWarnings("java:S2637") // False positive: fields are initialized in @PostConstruct
     public TokenValidatorProducer(Config config) {
         this.config = config;
@@ -96,13 +92,13 @@ public class TokenValidatorProducer {
     void init() {
         LOGGER.info(INFO.INITIALIZING_JWT_VALIDATION_COMPONENTS);
 
-        // Create RetryStrategy from configuration
+        // Create RetryConfig from configuration (used locally, not produced as CDI bean)
         RetryStrategyConfigResolver retryResolver = new RetryStrategyConfigResolver(config);
-        retryStrategy = retryResolver.resolveRetryStrategy();
+        RetryConfig retryConfig = retryResolver.resolveRetryConfig();
 
         // Resolve issuer configurations using the dedicated resolver
         // (Keycloak mappers are now configured per-issuer in IssuerConfigResolver)
-        IssuerConfigResolver issuerConfigResolver = new IssuerConfigResolver(config, retryStrategy);
+        IssuerConfigResolver issuerConfigResolver = new IssuerConfigResolver(config, retryConfig);
         issuerConfigs = issuerConfigResolver.resolveIssuerConfigs();
 
         // Create SecurityEventCounter for proper initialization

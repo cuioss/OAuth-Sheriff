@@ -15,9 +15,8 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks.http;
 
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.http.client.handler.SecureSSLContextProvider;
-import de.cuioss.http.client.retry.RetryStrategies;
-import de.cuioss.http.client.retry.RetryStrategy;
 import de.cuioss.sheriff.oauth.core.JWTValidationLogMessages;
 import de.cuioss.test.juli.LogAsserts;
 import de.cuioss.test.juli.TestLogLevel;
@@ -297,28 +296,28 @@ class HttpJwksLoaderConfigTest {
     @Test
     @DisplayName("Should test equals and hashCode methods")
     void shouldTestEqualsAndHashCode() {
-        // Use same RetryStrategy instance for both configs since it's now part of equals/hashCode
-        RetryStrategy sharedRetryStrategy = RetryStrategies.exponentialBackoff();
+        // Use same RetryConfig instance for both configs since it's now part of equals/hashCode
+        RetryConfig sharedRetryConfig = RetryConfig.defaults();
 
         HttpJwksLoaderConfig config1 = HttpJwksLoaderConfig.builder()
                 .jwksUrl(VALID_URL)
                 .issuerIdentifier("test-issuer")
                 .refreshIntervalSeconds(REFRESH_INTERVAL)
-                .retryStrategy(sharedRetryStrategy)
+                .retryConfig(sharedRetryConfig)
                 .build();
 
         HttpJwksLoaderConfig config2 = HttpJwksLoaderConfig.builder()
                 .jwksUrl(VALID_URL)
                 .issuerIdentifier("test-issuer")
                 .refreshIntervalSeconds(REFRESH_INTERVAL)
-                .retryStrategy(sharedRetryStrategy)
+                .retryConfig(sharedRetryConfig)
                 .build();
 
         HttpJwksLoaderConfig config3 = HttpJwksLoaderConfig.builder()
                 .jwksUrl(VALID_URL)
                 .issuerIdentifier("test-issuer")
                 .refreshIntervalSeconds(120) // Different value
-                .retryStrategy(sharedRetryStrategy)
+                .retryConfig(sharedRetryConfig)
                 .build();
         assertEquals(config1, config2, "Configs with same values should be equal");
         assertEquals(config1.hashCode(), config2.hashCode(), "Configs with same values should have same hashCode");

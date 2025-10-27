@@ -15,8 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.config;
 
-import de.cuioss.http.client.retry.RetryStrategies;
-import de.cuioss.http.client.retry.RetryStrategy;
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
 import de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultGroupsMapper;
 import de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultRolesMapper;
@@ -59,7 +58,7 @@ public class IssuerConfigResolver {
     private static final CuiLogger LOGGER = new CuiLogger(IssuerConfigResolver.class);
 
     private final Config config;
-    private final RetryStrategy retryStrategy;
+    private final RetryConfig retryConfig;
 
     /**
      * Creates a new IssuerConfigResolver with the specified configuration.
@@ -67,18 +66,18 @@ public class IssuerConfigResolver {
      * @param config the configuration instance to use for property resolution
      */
     public IssuerConfigResolver(Config config) {
-        this(config, RetryStrategies.exponentialBackoff());
+        this(config, RetryConfig.defaults());
     }
 
     /**
-     * Creates a new IssuerConfigResolver with the specified configuration and retry strategy.
+     * Creates a new IssuerConfigResolver with the specified configuration and retry config.
      *
      * @param config the configuration instance to use for property resolution
-     * @param retryStrategy the retry strategy to use for HTTP operations
+     * @param retryConfig the retry configuration to use for HTTP operations
      */
-    public IssuerConfigResolver(Config config, RetryStrategy retryStrategy) {
+    public IssuerConfigResolver(Config config, RetryConfig retryConfig) {
         this.config = config;
-        this.retryStrategy = retryStrategy;
+        this.retryConfig = retryConfig;
     }
 
     /**
@@ -411,8 +410,8 @@ public class IssuerConfigResolver {
             LOGGER.debug("Set max retired key sets for %s: %s", issuerName, maxRetiredSets.get());
         }
 
-        // Set the retry strategy
-        builder.retryStrategy(retryStrategy);
+        // Set the retry configuration
+        builder.retryConfig(retryConfig);
 
         // Let the builder validate and create the instance
         return builder.build();

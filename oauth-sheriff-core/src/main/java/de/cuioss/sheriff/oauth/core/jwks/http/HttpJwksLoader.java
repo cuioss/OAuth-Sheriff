@@ -17,7 +17,10 @@ package de.cuioss.sheriff.oauth.core.jwks.http;
 
 import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.http.client.LoadingStatusProvider;
-import de.cuioss.http.client.ResilientHttpHandler;
+import de.cuioss.http.client.adapter.CacheKeyHeaderFilter;
+import de.cuioss.http.client.adapter.ETagAwareHttpAdapter;
+import de.cuioss.http.client.adapter.HttpAdapter;
+import de.cuioss.http.client.adapter.ResilientHttpAdapter;
 import de.cuioss.http.client.handler.HttpHandler;
 import de.cuioss.http.client.result.HttpResult;
 import de.cuioss.sheriff.oauth.core.json.Jwks;
@@ -44,7 +47,8 @@ import static de.cuioss.sheriff.oauth.core.JWTValidationLogMessages.WARN;
 /**
  * JWKS loader that loads from HTTP endpoint with caching and background refresh support.
  * Supports both direct HTTP endpoints and well-known discovery.
- * Uses ResilientHttpHandler for stateful HTTP caching with optional scheduled background refresh.
+ * Uses HttpAdapter composition (ETagAwareHttpAdapter + ResilientHttpAdapter) for bandwidth
+ * optimization via ETag caching and resilient retry behavior with optional scheduled background refresh.
  * Background refresh is automatically started after the first successful key load.
  * <p>
  * This implementation follows a clean architecture with:
@@ -54,6 +58,7 @@ import static de.cuioss.sheriff.oauth.core.JWTValidationLogMessages.WARN;
  *   <li>Lock-free status checks using AtomicReference</li>
  *   <li>Key rotation grace period support for Issue #110</li>
  *   <li>Proper separation of concerns</li>
+ *   <li>URI-only cache keys for public OAuth endpoints (no header pollution)</li>
  * </ul>
  * <p>
  * Implements Requirement CUI-JWT-4.5: Key Rotation Grace Period
@@ -73,7 +78,7 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
     private final AtomicReference<LoaderStatus> status = new AtomicReference<>(LoaderStatus.UNDEFINED);
     private final AtomicReference<JWKSKeyLoader> currentKeys = new AtomicReference<>();
     private final ConcurrentLinkedDeque<RetiredKeySet> retiredKeys = new ConcurrentLinkedDeque<>();
-    private final AtomicReference<ResilientHttpHandler<Jwks>> httpHandler = new AtomicReference<>();
+    private final AtomicReference<HttpAdapter<Jwks>> httpAdapter = new AtomicReference<>();
     private final AtomicReference<ScheduledFuture<?>> refreshTask = new AtomicReference<>();
     private SecurityEventCounter securityEventCounter;
     private final AtomicReference<String> resolvedIssuerIdentifier = new AtomicReference<>();
@@ -98,9 +103,9 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
         return CompletableFuture.supplyAsync(() -> {
             status.set(LoaderStatus.LOADING);
 
-            // Resolve the handler (may involve well-known discovery)
-            Optional<ResilientHttpHandler<Jwks>> handlerOpt = resolveJWKSHandler();
-            if (handlerOpt.isEmpty()) {
+            // Resolve the adapter (may involve well-known discovery)
+            Optional<HttpAdapter<Jwks>> adapterOpt = resolveJWKSAdapter();
+            if (adapterOpt.isEmpty()) {
                 status.set(LoaderStatus.ERROR);
                 String errorDetail = config.getWellKnownConfig() != null
                         ? "Well-known discovery failed"
@@ -114,11 +119,11 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
                 return LoaderStatus.ERROR;
             }
 
-            ResilientHttpHandler<Jwks> handler = handlerOpt.get();
-            httpHandler.set(handler);
+            HttpAdapter<Jwks> adapter = adapterOpt.get();
+            httpAdapter.set(adapter);
 
-            // Load JWKS via ResilientHttpHandler
-            HttpResult<Jwks> result = handler.load();
+            // Load JWKS via HttpAdapter (async with join for initialization)
+            HttpResult<Jwks> result = adapter.get().join();
 
             // Start background refresh if configured (regardless of initial load status to enable retries)
             boolean backgroundRefreshEnabled = config.isBackgroundRefreshEnabled();
@@ -158,18 +163,18 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
     }
 
     /**
-     * Resolves the JWKS handler based on configuration.
+     * Resolves the JWKS adapter based on configuration.
      * For well-known: performs discovery to get JWKS URL and validates issuer
      * For direct: uses the configured HTTP handler
      *
-     * @return Optional containing the handler, or empty if resolution failed
+     * @return Optional containing the adapter, or empty if resolution failed
      */
     @SuppressWarnings("java:S3776") // Cognitive complexity - issuer resolution requires these checks
-    private Optional<ResilientHttpHandler<Jwks>> resolveJWKSHandler() {
+    private Optional<HttpAdapter<Jwks>> resolveJWKSAdapter() {
         HttpHandler handler;
 
         if (config.getWellKnownConfig() != null) {
-            // Well-known discovery - the resolver itself uses ResilientHttpHandler for retry!
+            // Well-known discovery - the resolver itself uses HttpAdapter for retry!
             HttpWellKnownResolver resolver = config.getWellKnownConfig().createResolver();
 
             // This call may block but we're in async context
@@ -213,7 +218,16 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
             handler = config.getHttpHandler();
             resolvedIssuerIdentifier.set(config.getIssuerIdentifier());
         }
-        return Optional.of(new ResilientHttpHandler<>(handler, config.getRetryStrategy(), new JwksHttpContentConverter()));
+
+        // Create base adapter with ETag caching
+        HttpAdapter<Jwks> baseAdapter = ETagAwareHttpAdapter.<Jwks>builder()
+                .httpHandler(handler)
+                .responseConverter(new JwksHttpContentConverter())
+                .cacheKeyHeaderFilter(CacheKeyHeaderFilter.NONE)  // URI only - public OAuth endpoints
+                .build();
+
+        // Wrap with retry behavior
+        return Optional.of(ResilientHttpAdapter.wrap(baseAdapter, config.getRetryConfig()));
     }
 
     @Override
@@ -308,20 +322,29 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
     private void startBackgroundRefresh() {
         refreshTask.set(config.getScheduledExecutorService().scheduleAtFixedRate(() -> {
                     try {
-                        ResilientHttpHandler<Jwks> handler = httpHandler.get();
-                        if (handler == null) {
+                        HttpAdapter<Jwks> adapter = httpAdapter.get();
+                        if (adapter == null) {
                             LOGGER.warn(WARN.BACKGROUND_REFRESH_NO_HANDLER);
                             return;
                         }
 
-                        HttpResult<Jwks> result = handler.load();
+                        // Async load with join (acceptable in background thread)
+                        HttpResult<Jwks> result = adapter.get().join();
 
-                        if (result.isSuccess() && result.getHttpStatus().map(s -> s == 200).orElse(false)) {
-                            result.getContent().ifPresent(this::updateKeys);
-                            LOGGER.debug("Background refresh updated keys");
-                        } else if (result.getHttpStatus().map(s -> s == 304).orElse(false)) {
-                            LOGGER.debug("Background refresh: keys unchanged (304)");
+                        // CRITICAL: 304 is a SUCCESS result with cached content
+                        if (result.isSuccess()) {
+                            int httpStatus = result.getHttpStatus().orElse(0);
+
+                            if (httpStatus == 200) {
+                                // New content received, update keys
+                                result.getContent().ifPresent(this::updateKeys);
+                                LOGGER.debug("Background refresh updated keys");
+                            } else if (httpStatus == 304) {
+                                // Not modified - cached content still valid (don't update)
+                                LOGGER.debug("Background refresh: keys unchanged (304)");
+                            }
                         } else {
+                            // Handle error (network, server, etc.)
                             String statusDesc = result.getErrorMessage()
                                     .orElseGet(() -> "HTTP status: " + result.getHttpStatus().map(String::valueOf).orElse("N/A"));
                             LOGGER.warn(WARN.BACKGROUND_REFRESH_FAILED, statusDesc);
@@ -349,7 +372,7 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
         }
         currentKeys.set(null);
         retiredKeys.clear();
-        httpHandler.set(null);
+        httpAdapter.set(null);
         currentJwksContent.set(null);
         status.set(LoaderStatus.UNDEFINED);
     }

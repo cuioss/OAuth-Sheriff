@@ -16,7 +16,7 @@
 package de.cuioss.sheriff.oauth.core.well_known;
 
 import de.cuioss.http.client.LoaderStatus;
-import de.cuioss.http.client.retry.RetryStrategy;
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.json.WellKnownResult;
 import de.cuioss.sheriff.oauth.core.test.dispatcher.WellKnownDispatcher;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
@@ -67,7 +67,7 @@ class HttpWellKnownResolverTest {
 
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(wellKnownUrl)
-                .retryStrategy(RetryStrategy.none())
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build())
                 .build();
 
         resolver = config.createResolver();
@@ -96,7 +96,7 @@ class HttpWellKnownResolverTest {
 
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(wellKnownUrl)
-                .retryStrategy(RetryStrategy.none())
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build())
                 .build();
 
         resolver = config.createResolver();
@@ -122,7 +122,7 @@ class HttpWellKnownResolverTest {
 
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(wellKnownUrl)
-                .retryStrategy(RetryStrategy.none())
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build())
                 .build();
 
         resolver = config.createResolver();
@@ -163,7 +163,7 @@ class HttpWellKnownResolverTest {
 
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(wellKnownUrl)
-                .retryStrategy(RetryStrategy.none())
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build())
                 .build();
 
         resolver = config.createResolver();
@@ -191,7 +191,7 @@ class HttpWellKnownResolverTest {
 
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(wellKnownUrl)
-                .retryStrategy(RetryStrategy.none())
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build())
                 .build();
 
         resolver = config.createResolver();
@@ -217,7 +217,7 @@ class HttpWellKnownResolverTest {
 
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(wellKnownUrl)
-                .retryStrategy(RetryStrategy.none())
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build())
                 .build();
 
         resolver = config.createResolver();
