@@ -1,16 +1,16 @@
 # Claude Code Configuration
 
-All AI development guidelines for this project are located in: **`doc/ai-rules.md`**
+All AI development guidelines for this project are located in: **`agents.md`**
 
 This file contains:
-- Core process rules (critical)
-- Task completion standards (mandatory)
-- Code style guidelines
-- Testing and logging standards
-- Framework-specific standards
-- AI tool specific instructions
+- Dev environment tips and build commands
+- Testing instructions and pre-commit validation
+- Code style and logging standards
+- Framework-specific standards (Quarkus, CDI)
+- OpenRewrite marker handling
+- Custom commands and slash commands
 
-Please refer to `doc/ai-rules.md` for complete guidance when working on this CUI JWT project.
+Please refer to `agents.md` for complete guidance when working on this OAuth Sheriff project.
 
 ## Custom Commands
 
@@ -184,16 +184,21 @@ The project includes custom slash commands located in `.claude/commands/` (track
 
 ### /verify-project [push]
 
-Comprehensive project verification workflow that runs the full Maven build with pre-commit profile.
+Comprehensive project verification workflow that delegates to specialized agents.
 
-- Reads execution duration from `doc/commands.md`
-- Runs: `./mvnw -Ppre-commit clean install`
-- Analyzes all errors, warnings, and OpenRewrite markers
-- Fixes issues and repeats until clean
-- Updates execution duration if changed >10%
-- Optional `push` parameter: automatically commits and pushes changes after successful verification
+- Delegates to **project-builder** agent for Maven build and verification
+- Optionally delegates to **commit-current-changes** agent for commit/push
+- The project-builder agent:
+  - Reads execution duration from `doc/commands.md`
+  - Runs: `./mvnw -Ppre-commit clean install`
+  - Analyzes all errors, warnings, and OpenRewrite markers
+  - Fixes issues and repeats until clean
+  - Updates execution duration if changed >10%
+- Optional `push` parameter: commits and pushes changes after successful verification
 
 **Usage:** `/verify-project` or `/verify-project push`
+
+**Benefits**: No code duplication - delegates to reusable agents instead of implementing verification/commit logic directly.
 
 ### /verify-integration-tests
 
