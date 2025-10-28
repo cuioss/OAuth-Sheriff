@@ -72,7 +72,6 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
 
     private static final CuiLogger LOGGER = new CuiLogger(HttpJwksLoader.class);
     private static final String ISSUER_NOT_CONFIGURED = "not-configured";
-    private static final String ISSUER_MUST_BE_RESOLVED = "Issuer identifier must be resolved at this point";
 
     private final HttpJwksLoaderConfig config;
     private final AtomicReference<LoaderStatus> status = new AtomicReference<>(LoaderStatus.UNDEFINED);
@@ -95,7 +94,6 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
     }
 
     @Override
-    @SuppressWarnings("java:S3776") // Cognitive complexity - initialization logic requires these checks
     public CompletableFuture<LoaderStatus> initJWKSLoader(SecurityEventCounter counter) {
         this.securityEventCounter = counter;
 
@@ -107,12 +105,13 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
             Optional<HttpAdapter<Jwks>> adapterOpt = resolveJWKSAdapter();
             if (adapterOpt.isEmpty()) {
                 status.set(LoaderStatus.ERROR);
-                String errorDetail = config.getWellKnownConfig() != null
+                boolean isWellKnownFailure = config.getWellKnownConfig() != null;
+                String errorDetail = isWellKnownFailure
                         ? "Well-known discovery failed"
                         : "No HTTP handler configured";
 
                 // Log appropriate message based on failure type
-                if (config.getWellKnownConfig() != null) {
+                if (isWellKnownFailure) {
                     LOGGER.warn(WARN.JWKS_URI_RESOLUTION_FAILED);
                 }
                 LOGGER.error(ERROR.JWKS_INITIALIZATION_FAILED, errorDetail, getIssuerIdentifier().orElse(ISSUER_NOT_CONFIGURED));
@@ -122,8 +121,8 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
             HttpAdapter<Jwks> adapter = adapterOpt.get();
             httpAdapter.set(adapter);
 
-            // Load JWKS via HttpAdapter (async with join for initialization)
-            HttpResult<Jwks> result = adapter.get().join();
+            // Load JWKS via HttpAdapter (blocking for initialization)
+            HttpResult<Jwks> result = adapter.getBlocking();
 
             // Start background refresh if configured (regardless of initial load status to enable retries)
             boolean backgroundRefreshEnabled = config.isBackgroundRefreshEnabled();
@@ -135,30 +134,20 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
                 result.getContent().ifPresent(this::updateKeys);
 
                 // Log successful HTTP load
-                LOGGER.info(INFO.JWKS_LOADED, getIssuerIdentifier().orElseThrow(() -> new IllegalStateException(ISSUER_MUST_BE_RESOLVED)));
+                LOGGER.info(INFO.JWKS_LOADED, getResolvedIssuer());
 
                 status.set(LoaderStatus.OK);
                 return LoaderStatus.OK;
             }
 
-            // Log appropriate warning if no cached content
-            result.getErrorMessage().ifPresent(msg -> {
-                if (msg.contains("no cached content")) {
-                    LOGGER.warn(WARN.JWKS_LOAD_FAILED_NO_CACHE);
-                }
-            });
-
-            LOGGER.error(ERROR.JWKS_LOAD_FAILED, result.getErrorMessage().orElse("Unknown error"), getIssuerIdentifier().orElseThrow(() -> new IllegalStateException(ISSUER_MUST_BE_RESOLVED)));
+            // Load failed - log error
+            LOGGER.error(ERROR.JWKS_LOAD_FAILED, result.getErrorMessage().orElse("Unknown error"), getResolvedIssuer());
 
             // If background refresh is enabled, keep status as UNDEFINED to allow retries
             // Otherwise set to ERROR for permanent failure
-            if (backgroundRefreshEnabled) {
-                status.set(LoaderStatus.UNDEFINED);
-                return LoaderStatus.UNDEFINED;
-            } else {
-                status.set(LoaderStatus.ERROR);
-                return LoaderStatus.ERROR;
-            }
+            LoaderStatus finalStatus = backgroundRefreshEnabled ? LoaderStatus.UNDEFINED : LoaderStatus.ERROR;
+            status.set(finalStatus);
+            return finalStatus;
         });
     }
 
@@ -169,7 +158,6 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
      *
      * @return Optional containing the adapter, or empty if resolution failed
      */
-    @SuppressWarnings("java:S3776") // Cognitive complexity - issuer resolution requires these checks
     private Optional<HttpAdapter<Jwks>> resolveJWKSAdapter() {
         HttpHandler handler;
 
@@ -187,29 +175,11 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
             Optional<String> discoveredIssuer = resolver.getIssuer();
             String configuredIssuer = config.getIssuerIdentifier();
 
-            if (discoveredIssuer.isPresent()) {
-                if (configuredIssuer != null) {
-                    // Configured issuer takes precedence, but validate against discovered
-                    if (!configuredIssuer.equals(discoveredIssuer.get())) {
-                        LOGGER.warn(WARN.ISSUER_MISMATCH, configuredIssuer, discoveredIssuer.get());
-                        securityEventCounter.increment(SecurityEventCounter.EventType.ISSUER_MISMATCH);
-                    }
-                    resolvedIssuerIdentifier.set(configuredIssuer);
-                } else {
-                    // No configured issuer - use discovered issuer from well-known
-                    resolvedIssuerIdentifier.set(discoveredIssuer.get());
-                }
-            } else {
-                // No issuer in well-known document
-                if (configuredIssuer != null) {
-                    // Use configured issuer if available
-                    resolvedIssuerIdentifier.set(configuredIssuer);
-                } else {
-                    // No issuer available at all - fail
-                    LOGGER.error(ERROR.JWKS_INITIALIZATION_FAILED, "No issuer identifier found", "well-known");
-                    return Optional.empty();
-                }
+            Optional<String> issuer = resolveIssuer(discoveredIssuer.orElse(null), configuredIssuer);
+            if (issuer.isEmpty()) {
+                return Optional.empty();
             }
+            resolvedIssuerIdentifier.set(issuer.get());
 
             // Use overloaded method to create handler for discovered JWKS URL
             handler = config.getHttpHandler(jwksUri.get());
@@ -296,22 +266,16 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
 
         // Retire old keys with grace period
         JWKSKeyLoader oldLoader = currentKeys.getAndSet(newLoader);
-        if (oldLoader != null) {
-            // Special handling for zero grace period - don't retain retired keys
-            if (config.getKeyRotationGracePeriod().isZero()) {
-                // With zero grace period, immediately discard old keys
-                // Don't add to retiredKeys at all
-            } else {
-                retiredKeys.addFirst(new RetiredKeySet(oldLoader, now));
+        if (oldLoader != null && !config.getKeyRotationGracePeriod().isZero()) {
+            retiredKeys.addFirst(new RetiredKeySet(oldLoader, now));
 
-                // Clean up expired retired keys
-                Instant cutoff = now.minus(config.getKeyRotationGracePeriod());
-                retiredKeys.removeIf(retired -> retired.retiredAt.isBefore(cutoff));
+            // Clean up expired retired keys
+            Instant cutoff = now.minus(config.getKeyRotationGracePeriod());
+            retiredKeys.removeIf(retired -> retired.retiredAt.isBefore(cutoff));
 
-                // Keep max N retired sets
-                while (retiredKeys.size() > config.getMaxRetiredKeySets()) {
-                    retiredKeys.removeLast();
-                }
+            // Keep max N retired sets
+            while (retiredKeys.size() > config.getMaxRetiredKeySets()) {
+                retiredKeys.removeLast();
             }
         }
 
@@ -328,21 +292,11 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
                             return;
                         }
 
-                        // Async load with join (acceptable in background thread)
-                        HttpResult<Jwks> result = adapter.get().join();
+                        // Blocking load in background thread
+                        HttpResult<Jwks> result = adapter.getBlocking();
 
-                        // CRITICAL: 304 is a SUCCESS result with cached content
                         if (result.isSuccess()) {
-                            int httpStatus = result.getHttpStatus().orElse(0);
-
-                            if (httpStatus == 200) {
-                                // New content received, update keys
-                                result.getContent().ifPresent(this::updateKeys);
-                                LOGGER.debug("Background refresh updated keys");
-                            } else if (httpStatus == 304) {
-                                // Not modified - cached content still valid (don't update)
-                                LOGGER.debug("Background refresh: keys unchanged (304)");
-                            }
+                            result.getContent().ifPresent(this::updateKeys);
                         } else {
                             // Handle error (network, server, etc.)
                             String statusDesc = result.getErrorMessage()
@@ -351,7 +305,7 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
                         }
                     } catch (IllegalArgumentException e) {
                         // JSON parsing or validation errors
-                        LOGGER.warn(WARN.BACKGROUND_REFRESH_PARSE_ERROR, e.getMessage(), getIssuerIdentifier().orElseThrow(() -> new IllegalStateException(ISSUER_MUST_BE_RESOLVED)));
+                        LOGGER.warn(WARN.BACKGROUND_REFRESH_PARSE_ERROR, e.getMessage(), getResolvedIssuer());
                     } catch (IllegalStateException e) {
                         // State errors (e.g., from orElseThrow when issuer not resolved)
                         LOGGER.warn(WARN.BACKGROUND_REFRESH_FAILED, e.getMessage());
@@ -388,6 +342,43 @@ public class HttpJwksLoader implements JwksLoader, LoadingStatusProvider, AutoCl
         return task != null && !task.isCancelled() && !task.isDone();
     }
 
+    /**
+     * Gets the resolved issuer identifier.
+     * This method is guaranteed to return a non-null value after resolveJWKSAdapter() succeeds.
+     *
+     * @return the resolved issuer identifier
+     */
+    private String getResolvedIssuer() {
+        return resolvedIssuerIdentifier.get();
+    }
+
+    /**
+     * Resolves the issuer identifier from discovered and configured sources.
+     * Implements the issuer resolution logic with precedence rules.
+     *
+     * @param discoveredIssuer the issuer from well-known discovery (nullable)
+     * @param configuredIssuer the configured issuer from configuration (nullable)
+     * @return Optional containing the resolved issuer, or empty if no issuer available
+     */
+    private Optional<String> resolveIssuer(String discoveredIssuer, String configuredIssuer) {
+        // Case 1: No issuer at all - fail
+        if (discoveredIssuer == null && configuredIssuer == null) {
+            LOGGER.error(ERROR.JWKS_INITIALIZATION_FAILED, "No issuer identifier found", "well-known");
+            return Optional.empty();
+        }
+
+        // Case 2: Configured issuer takes precedence
+        if (configuredIssuer != null) {
+            if (discoveredIssuer != null && !configuredIssuer.equals(discoveredIssuer)) {
+                LOGGER.warn(WARN.ISSUER_MISMATCH, configuredIssuer, discoveredIssuer);
+                securityEventCounter.increment(SecurityEventCounter.EventType.ISSUER_MISMATCH);
+            }
+            return Optional.of(configuredIssuer);
+        }
+
+        // Case 3: Use discovered issuer
+        return Optional.of(discoveredIssuer);
+    }
 
     /**
      * Private record to hold retired key sets with their retirement timestamp.
