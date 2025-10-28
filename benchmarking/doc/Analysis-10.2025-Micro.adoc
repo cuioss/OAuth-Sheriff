@@ -151,30 +151,28 @@ Based on `jwt-validation-metrics.json` (1,024 samples):
 
 **Gap Analysis:**
 
-[cols="2,2,3", options="header"]
+[cols="2,3", options="header"]
 |===
-|Factor
-|Impact
-|Explanation
+|Metric
+|Measurement
 
-|Network Overhead
-|10-15 µs
-|HTTP request/response processing, Docker bridge networking
+|Pure library (micro-benchmark)
+|108,400 ops/s, 53µs P50 latency
 
-|Quarkus Stack
-|5-10 µs
-|REST framework, CDI injection, interceptors, context handling
+|Integration (WRK, 150 conns stress)
+|20,400 ops/s, 6.30ms P50 latency
 
-|Native Compilation
-|Minimal
-|Native executable reduces startup, not per-request overhead
+|Throughput gap
+|5x slower (87k ops/s difference)
 
-|**Total Gap**
-|**~87k ops/s**
-|**Pure library: 108k ops/s; Integration: 21k ops/s**
+|Latency gap
+|119x slower (6.247ms overhead)
+
+|Integration overhead includes
+|HTTP/REST stack, Docker networking, CDI context, serialization (individual contributions unmeasured)
 |===
 
-**Conclusion:** The 5x performance difference is primarily due to HTTP/REST overhead. The core library validation is highly optimized at 108k ops/s.
+**Conclusion:** The core library validation is highly optimized at 108k ops/s with 53µs latency. Integration testing shows 21k ops/s and 6.3ms latency - the 6.247ms overhead includes HTTP/REST framework stack components (individual contributions unmeasured).
 
 === Bottleneck Identification
 
@@ -245,7 +243,7 @@ Comprehensive JMH micro-benchmark analysis reveals:
 * **Signature validation dominates**: 85% of validation time (45µs) spent in cryptographic operations (expected and unavoidable)
 * **Minimal overhead**: Non-cryptographic operations (parsing, cache, claims) add only ~8µs (15% of total)
 * **Fast-fail optimization**: 50% invalid token rate improves throughput to 225k ops/s
-* **Integration reality check**: 5x performance gap between library (108k ops/s) and integration (21k ops/s) is due to HTTP/REST overhead, not library inefficiency
+* **Integration reality check**: 5x throughput gap (108k ops/s library vs 21k ops/s integration) and 119x latency gap (53µs vs 6.3ms) - integration includes HTTP/REST framework stack (individual contributions unmeasured)
 * **Production readiness**: Library meets performance requirements with sub-100µs validation latency
 
 **Recommendation:** Current library performance is excellent. Further optimization would require algorithmic changes to signature validation (e.g., EdDSA instead of RSA), which is outside the scope of this library.
