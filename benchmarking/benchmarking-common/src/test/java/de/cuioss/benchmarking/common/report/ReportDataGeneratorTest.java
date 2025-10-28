@@ -112,6 +112,6 @@ class ReportDataGeneratorTest {
 
         List<Double> p50Values = datasets.get("50.0th");
         assertNotNull(p50Values, "P50 values should exist");
-        assertTrue(p50Values.size() > 0, "Should have at least one percentile value");
+        assertFalse(p50Values.isEmpty(), "Should have at least one percentile value");
     }
 }

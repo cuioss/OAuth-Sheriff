@@ -61,7 +61,7 @@ public class JwksEndpointHealthCheck implements HealthCheck {
 
     @Inject
     public JwksEndpointHealthCheck(List<IssuerConfig> issuerConfigs,
-                                   @ConfigProperty(name = JwtPropertyKeys.HEALTH.JWKS.CACHE_SECONDS, defaultValue = DEFAULT_CACHE_SECONDS) int cacheSeconds) {
+            @ConfigProperty(name = JwtPropertyKeys.HEALTH.JWKS.CACHE_SECONDS, defaultValue = DEFAULT_CACHE_SECONDS) int cacheSeconds) {
         this.issuerConfigs = issuerConfigs;
         this.cacheTimeoutMillis = TimeUnit.SECONDS.toMillis(cacheSeconds);
     }
@@ -87,16 +87,16 @@ public class JwksEndpointHealthCheck implements HealthCheck {
     private HealthCheckResponse performHealthCheck() {
         if (issuerConfigs.isEmpty()) {
             return HealthCheckResponse.named(HEALTHCHECK_NAME)
-                .down()
-                .withData(ERROR, ERROR_NO_ISSUER_CONFIGS)
-                .build();
+                    .down()
+                    .withData(ERROR, ERROR_NO_ISSUER_CONFIGS)
+                    .build();
         }
 
         var responseBuilder = HealthCheckResponse.named(HEALTHCHECK_NAME).up();
 
         var results = issuerConfigs.stream()
-            .map(issuerConfig -> EndpointResult.fromIssuerConfig(issuerConfig.getIssuerIdentifier(), issuerConfig))
-            .toList();
+                .map(issuerConfig -> EndpointResult.fromIssuerConfig(issuerConfig.getIssuerIdentifier(), issuerConfig))
+                .toList();
 
         // Add all endpoint data to response
         for (int i = 0; i < results.size(); i++) {
@@ -116,8 +116,8 @@ public class JwksEndpointHealthCheck implements HealthCheck {
 
         // Add enhanced readiness reporting
         responseBuilder
-            .withData("readiness", allReady ? "READY" : "NOT_READY")
-            .withData("loading", anyLoading ? "IN_PROGRESS" : "COMPLETE");
+                .withData("readiness", allReady ? "READY" : "NOT_READY")
+                .withData("loading", anyLoading ? "IN_PROGRESS" : "COMPLETE");
 
         return responseBuilder.build();
     }
