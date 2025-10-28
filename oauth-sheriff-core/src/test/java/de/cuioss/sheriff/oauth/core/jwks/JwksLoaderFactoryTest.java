@@ -15,13 +15,13 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoader;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoaderConfig;
 import de.cuioss.sheriff.oauth.core.jwks.key.JWKSKeyLoader;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
 import de.cuioss.sheriff.oauth.core.test.InMemoryJWKSFactory;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

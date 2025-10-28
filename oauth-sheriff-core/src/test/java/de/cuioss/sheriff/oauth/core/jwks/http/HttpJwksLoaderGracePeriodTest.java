@@ -15,7 +15,6 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks.http;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
 import de.cuioss.sheriff.oauth.core.TokenType;
 import de.cuioss.sheriff.oauth.core.TokenValidator;
@@ -30,6 +29,7 @@ import de.cuioss.sheriff.oauth.core.test.InMemoryKeyMaterialHandler;
 import de.cuioss.sheriff.oauth.core.test.TestTokenHolder;
 import de.cuioss.sheriff.oauth.core.test.dispatcher.JwksResolveDispatcher;
 import de.cuioss.sheriff.oauth.core.test.generator.ClaimControlParameter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
 import de.cuioss.test.mockwebserver.EnableMockWebServer;
 import de.cuioss.test.mockwebserver.URIBuilder;

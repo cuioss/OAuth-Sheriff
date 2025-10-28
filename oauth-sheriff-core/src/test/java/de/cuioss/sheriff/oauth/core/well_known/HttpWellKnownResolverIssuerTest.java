@@ -15,9 +15,9 @@
  */
 package de.cuioss.sheriff.oauth.core.well_known;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.test.dispatcher.WellKnownDispatcher;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
 import de.cuioss.test.mockwebserver.EnableMockWebServer;
 import de.cuioss.test.mockwebserver.URIBuilder;

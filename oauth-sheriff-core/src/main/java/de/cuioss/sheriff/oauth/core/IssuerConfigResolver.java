@@ -15,9 +15,9 @@
  */
 package de.cuioss.sheriff.oauth.core;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.exception.TokenValidationException;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.tools.logging.CuiLogger;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;

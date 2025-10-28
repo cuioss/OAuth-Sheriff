@@ -15,13 +15,13 @@
  */
 package de.cuioss.sheriff.oauth.core.well_known;
 
-import de.cuioss.http.client.LoaderStatus;
-import de.cuioss.http.client.LoadingStatusProvider;
 import de.cuioss.http.client.adapter.ETagAwareHttpAdapter;
 import de.cuioss.http.client.adapter.HttpAdapter;
 import de.cuioss.http.client.adapter.ResilientHttpAdapter;
 import de.cuioss.http.client.result.HttpResult;
 import de.cuioss.sheriff.oauth.core.json.WellKnownResult;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
 import de.cuioss.tools.logging.CuiLogger;
 
 import java.util.Optional;

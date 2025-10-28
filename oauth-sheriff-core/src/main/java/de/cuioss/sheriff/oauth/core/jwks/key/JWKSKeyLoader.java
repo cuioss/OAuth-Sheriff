@@ -15,7 +15,6 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks.key;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.ParserConfig;
 import de.cuioss.sheriff.oauth.core.json.JwkKey;
 import de.cuioss.sheriff.oauth.core.json.Jwks;
@@ -25,6 +24,7 @@ import de.cuioss.sheriff.oauth.core.jwks.parser.JwksParser;
 import de.cuioss.sheriff.oauth.core.jwks.parser.KeyProcessor;
 import de.cuioss.sheriff.oauth.core.security.JwkAlgorithmPreferences;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.tools.logging.CuiLogger;
 import de.cuioss.tools.string.MoreStrings;
 import lombok.EqualsAndHashCode;

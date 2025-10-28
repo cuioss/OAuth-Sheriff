@@ -15,7 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks;
 
-import de.cuioss.http.client.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.test.generator.junit.EnableGeneratorController;
 import org.junit.jupiter.api.Test;
 

@@ -15,8 +15,6 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks.http;
 
-import de.cuioss.http.client.LoaderStatus;
-import de.cuioss.http.client.LoadingStatusProvider;
 import de.cuioss.http.client.adapter.CacheKeyHeaderFilter;
 import de.cuioss.http.client.adapter.ETagAwareHttpAdapter;
 import de.cuioss.http.client.adapter.HttpAdapter;
@@ -29,6 +27,8 @@ import de.cuioss.sheriff.oauth.core.jwks.JwksType;
 import de.cuioss.sheriff.oauth.core.jwks.key.JWKSKeyLoader;
 import de.cuioss.sheriff.oauth.core.jwks.key.KeyInfo;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
 import de.cuioss.sheriff.oauth.core.well_known.HttpWellKnownResolver;
 import de.cuioss.tools.logging.CuiLogger;
 

@@ -395,26 +395,40 @@ For implementation details, see the JavaDoc of the following classes:
 * xref:../../oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/jwks/key/JWKSKeyLoader.java[JWKSKeyLoader]
 * xref:../../oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/jwks/JwksLoaderFactory.java[JwksLoaderFactory]
 
-==== Internal API Changes (CUI-HTTP Migration)
+==== LoadingStatusProvider and LoaderStatus
 
-The following internal changes were made during the migration to CUI-HTTP's async-first adapter architecture. **These changes do not affect the public OAuth-Sheriff API** - all TokenValidator and JwksLoader public methods remain unchanged.
+OAuth-Sheriff provides health status infrastructure for loader components through the `LoadingStatusProvider` interface and `LoaderStatus` enum.
 
-**Internal Changes:**
+**LoadingStatusProvider Interface:**
 
-* `LoaderStatus.IN_PROGRESS` → `LoaderStatus.LOADING` - Renamed enum value for consistency with async operations
-* `ResilientHttpHandler` → `HttpAdapter` composition pattern - Internal implementation detail
-* `RetryStrategy` → `RetryConfig` - Configuration class change (affects HttpJwksLoaderConfig and WellKnownConfig builders)
-* `HttpContentConverter` → `HttpResponseConverter` - Converter interface renamed with method changes
+Interface for components providing health status information in OAuth/JWT validation.
 
-**Public API Compatibility:**
+[source,java]
+----
+package de.cuioss.sheriff.oauth.core.util;
 
-* `JwksLoader` interface unchanged - all methods maintain same signatures
-* `TokenValidator` API unchanged - synchronous behavior preserved
-* `IssuerConfig` API unchanged - configuration methods remain the same
-* `LoadingStatusProvider` interface unchanged - health check methods remain the same
+public interface LoadingStatusProvider {
+    LoaderStatus getLoaderStatus();
+    default boolean isLoaderStatusOK() { ... }
+}
+----
 
-**Migration Note:**
-OAuth-Sheriff users do not need to make any changes to their code. The migration to async-first architecture is entirely internal and maintains full backward compatibility through synchronous wrappers (`.join()` calls).
+**Implementations:**
+
+* `JwksLoader` - JWKS key loading status
+* `HttpWellKnownResolver` - Well-known configuration status
+* `IssuerConfig` - Aggregated issuer configuration status
+
+**LoaderStatus Enum:**
+
+Status values for loader operations:
+
+* `UNDEFINED` - Initial state, not yet loaded
+* `LOADING` - Load operation in progress
+* `OK` - Successfully loaded and operational
+* `ERROR` - Load failed with non-recoverable error
+
+**Note:** These types provide health status infrastructure for OAuth/JWT validation components. All implementations must be non-blocking and avoid I/O operations in status checks.
 
 The following tests verify the implementation:
 

@@ -1,0 +1,1029 @@
+= Migration Plan: LoaderStatus and LoadingStatusProvider
+:toc: left
+:toclevels: 4
+:toc-title: Table of Contents
+:sectnums:
+:source-highlighter: highlight.js
+
+toc::[]
+
+== Executive Summary
+
+=== Objective
+Move `LoaderStatus` enum and `LoadingStatusProvider` interface from `cui-http` library to `OAuth-Sheriff` project to improve code cohesion and eliminate unused abstractions.
+
+=== Rationale
+* These types are **OAuth/JWT-specific** in purpose and documentation
+* **Single consumer**: Only OAuth-Sheriff uses these interfaces (no implementations exist in cui-http)
+* **Better cohesion**: Health checking for OAuth components should live with OAuth code
+* **YAGNI principle**: No evidence of reuse across multiple CUI projects
+* **Clearer intent**: Documentation can be OAuth-specific without confusion
+
+=== Impact Assessment
+* **cui-http**: Internal refactoring (pre-1.0), remove unused types
+* **OAuth-Sheriff**: Internal refactoring (pre-1.0), update imports, no API changes for OAuth-Sheriff consumers
+* **Other CUI projects**: None (no other projects use these types)
+* **Version impact**: Both projects are pre-1.0-SNAPSHOT, no version bump needed
+
+== Phase 0: Branch Strategy and Prerequisites
+
+=== Branch Information
+
+**OAuth-Sheriff:**
+* **Current branch:** `feature/integrate_cui_http_changes` (confirmed as current working branch)
+* **Target branch for PR:** `main`
+* **Strategy:** All changes will be committed to `feature/integrate_cui_http_changes` and pushed to remote
+
+**cui-http:**
+* **Target branch:** `main` (cui-http project convention - verify with project maintainer if uncertain)
+* **Strategy:** Changes will be committed directly to `main` branch (as indicated in Phase 7 Step 6 line 741)
+
+**Important:** If working on cui-http requires a feature branch instead of direct main commits, create a feature branch first:
+```bash
+cd /Users/oliver/git/cui-http
+git checkout -b feature/remove-oauth-loader-types
+```
+
+And adjust Phase 7 Step 6 push command to use the feature branch name.
+
+=== Prerequisites
+
+* Both repositories must be on the correct branch before starting
+* Both repositories must have clean working directories (no uncommitted changes)
+* Both repositories must be up-to-date with their remotes
+* User must have write access to both repositories
+
+== Phase 1: Pre-Migration Analysis
+
+=== Files to Move from cui-http
+
+[cols="1,3,1"]
+|===
+|File Type |File Path |Lines of Code
+
+|Source (Enum)
+|`src/main/java/de/cuioss/http/client/LoaderStatus.java`
+|50
+
+|Source (Interface)
+|`src/main/java/de/cuioss/http/client/LoadingStatusProvider.java`
+|88
+
+|Test
+|`src/test/java/de/cuioss/http/client/LoadingStatusProviderTest.java`
+|179
+|===
+
+**Total LOC**: ~317 lines
+
+=== Files to Update in cui-http
+
+[cols="1,3,2"]
+|===
+|Category |File Path |Change Type
+
+|Documentation
+|`doc/client-handlers-readme.adoc`
+|Remove sections 1.5 (LoadingStatusProvider, LoaderStatus)
+
+|Documentation
+|`doc/http-result-pattern.adoc`
+|Update/Remove LoaderStatus examples in pattern matching sections
+
+|Source (Javadoc)
+|`src/main/java/de/cuioss/http/client/result/HttpResult.java`
+|Update Javadoc examples to remove LoaderStatus references or use OAuth-Sheriff imports
+
+|Build
+|`pom.xml`
+|No version change needed (pre-1.0 refactoring)
+
+|Module
+|`src/main/java/module-info.java`
+|No change needed (entire `de.cuioss.http.client` package still exported for other types)
+|===
+
+=== Files to Update in OAuth-Sheriff
+
+==== Main Source Files (6 files with imports + 1 file with Javadoc reference)
+
+[cols="1,3"]
+|===
+|File |Change Required
+
+|`IssuerConfig.java`
+|Update import from `de.cuioss.http.client` → `de.cuioss.sheriff.oauth.core.util`
+
+|`IssuerConfigResolver.java`
+|Update import from `de.cuioss.http.client` → `de.cuioss.sheriff.oauth.core.util`
+
+|`jwks/JwksLoader.java`
+|Update import from `de.cuioss.http.client` → `de.cuioss.sheriff.oauth.core.util`
+
+|`jwks/http/HttpJwksLoader.java`
+|Update import from `de.cuioss.http.client` → `de.cuioss.sheriff.oauth.core.util`
+
+|`jwks/key/JWKSKeyLoader.java`
+|Update import from `de.cuioss.http.client` → `de.cuioss.sheriff.oauth.core.util`
+
+|`well_known/HttpWellKnownResolver.java`
+|Update import from `de.cuioss.http.client` → `de.cuioss.sheriff.oauth.core.util`
+
+|`jwks/JwksLoaderFactory.java`
+|Update Javadoc example: `CompletableFuture<LoaderStatus>` reference (no import to change)
+|===
+
+==== Test Files (12 files)
+
+[cols="1,3"]
+|===
+|File |Change Required
+
+|`pipeline/validator/TokenSignatureValidatorTest.java`
+|Update import
+
+|`well_known/HttpWellKnownResolverTest.java`
+|Update import
+
+|`well_known/HttpWellKnownResolverIssuerTest.java`
+|Update import
+
+|`jwks/LoaderStatusTest.java`
+|Update import
+
+|`jwks/http/HttpJwksLoaderGracePeriodTest.java`
+|Update import
+
+|`jwks/http/HttpJwksLoaderWellKnownAsyncTest.java`
+|Update import
+
+|`jwks/http/HttpJwksLoaderAsyncInitializationTest.java`
+|Update import
+
+|`jwks/http/SimpleHttpJwksLoaderTest.java`
+|Update import
+
+|`jwks/http/HttpJwksLoaderTest.java`
+|Update import
+
+|`jwks/http/HttpJwksLoaderLockFreeStatusTest.java`
+|Update import
+
+|`jwks/http/HttpJwksLoaderSchedulerTest.java`
+|Update import
+
+|`jwks/JwksLoaderFactoryTest.java`
+|Update import
+|===
+
+==== Documentation Files (1 file)
+
+[cols="1,3,2"]
+|===
+|File |Location |Change Required
+
+|`technical-components.adoc`
+|`/Users/oliver/git/OAuth-Sheriff/doc/specification/technical-components.adoc` (repository root, not module)
+|Update code examples to use new package name
+|===
+
+== Phase 2: Target Package Structure
+
+=== Target Package Location
+
+**Primary location:**
+```
+/Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/
+```
+
+=== Target Package
+
+```
+de.cuioss.sheriff.oauth.core.util.LoaderStatus
+de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider
+```
+
+Justification:
+* These types are utility infrastructure for OAuth/JWT operations
+* Used across multiple subcomponents (jwks, well_known, issuer config)
+* Consistent with CUI patterns (utility types in util subpackage)
+* Clear organization without cluttering the core package root
+
+== Phase 3: Migration Execution Plan
+
+=== Critical Pre-Execution Checks
+
+Before beginning the migration, verify the following:
+
+**1. Target Directory Exists:**
+```bash
+ls -la /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/util/
+```
+
+If the directory doesn't exist, create it:
+```bash
+mkdir -p /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/util/
+mkdir -p /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/test/java/de/cuioss/sheriff/oauth/core/util/
+```
+
+**2. No Existing Files:**
+Verify target files don't already exist:
+```bash
+ls /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/util/Loader* 2>&1
+# Expected: "No such file or directory"
+```
+
+If files exist, STOP and clarify with user whether to overwrite or merge.
+
+**3. Current Branch:**
+Verify you're on the correct branch:
+```bash
+cd /Users/oliver/git/OAuth-Sheriff
+git branch --show-current
+# Expected: feature/integrate_cui_http_changes
+```
+
+If not on correct branch, checkout:
+```bash
+git checkout feature/integrate_cui_http_changes
+```
+
+**4. Clean Working Directory:**
+Verify no uncommitted changes:
+```bash
+cd /Users/oliver/git/OAuth-Sheriff
+git status
+# Expected: "nothing to commit, working tree clean" OR only untracked "move-Loader-status/" directory
+```
+
+**5. cui-http Repository Accessible:**
+```bash
+ls /Users/oliver/git/cui-http/src/main/java/de/cuioss/http/client/LoaderStatus.java
+# Expected: File exists
+```
+
+=== Step 1: Create New Files in OAuth-Sheriff
+
+==== 1.1: Copy LoaderStatus.java
+```bash
+# Source
+/Users/oliver/git/cui-http/src/main/java/de/cuioss/http/client/LoaderStatus.java
+
+# Target
+/Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/util/LoaderStatus.java
+```
+
+**Changes required:**
+* Update package declaration: `package de.cuioss.sheriff.oauth.core.util;`
+* Update Javadoc to be OAuth/JWT-specific:
+  - Remove reference to `{@link de.cuioss.http.client.handler.HttpHandler}`
+  - Update class Javadoc line 19 to mention JWT/OAuth loaders explicitly (e.g., "Enum representing the status of a JWT/OAuth loader")
+* Preserve all enum values: `OK`, `ERROR`, `LOADING`, `UNDEFINED` (these names are already final - no renaming needed)
+* Preserve all methods unchanged
+
+==== 1.2: Copy LoadingStatusProvider.java
+```bash
+# Source
+/Users/oliver/git/cui-http/src/main/java/de/cuioss/http/client/LoadingStatusProvider.java
+
+# Target
+/Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/util/LoadingStatusProvider.java
+```
+
+**Changes required:**
+* Update package declaration: `package de.cuioss.sheriff.oauth.core.util;`
+* Update Javadoc:
+  - Replace "JWT validation components" → "OAuth/JWT validation components"
+  - Remove generic HTTP references, make OAuth/JWT-specific
+  - Update examples to use OAuth-Sheriff context (JwksLoader, IssuerConfig)
+* Update `@since` tag to match OAuth-Sheriff versioning
+* Preserve interface contract unchanged
+
+==== 1.3: Copy LoadingStatusProviderTest.java
+```bash
+# Source
+/Users/oliver/git/cui-http/src/test/java/de/cuioss/http/client/LoadingStatusProviderTest.java
+
+# Target
+/Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/test/java/de/cuioss/sheriff/oauth/core/util/LoadingStatusProviderTest.java
+```
+
+**Changes required:**
+* Update package declaration: `package de.cuioss.sheriff.oauth.core.util;`
+* Update imports to use new package
+* Preserve all test logic unchanged
+
+=== Step 2: Update OAuth-Sheriff Files
+
+==== 2.1: Update Main Source Imports (Automated)
+
+**Search pattern:**
+```java
+import de.cuioss.http.client.LoaderStatus;
+import de.cuioss.http.client.LoadingStatusProvider;
+```
+
+**Replace with:**
+```java
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
+```
+
+**Files affected:** 6 main source files (see section 1.3.1)
+
+**Note:** `JwksLoaderFactory.java` contains a Javadoc reference to `LoaderStatus` but no import statement. Update the Javadoc example manually after running the automated import replacement.
+
+**Execution:**
+
+**Detect OS and use appropriate sed syntax:**
+```bash
+cd /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core
+
+# macOS (BSD sed) - requires empty string after -i
+find src/main/java -name "*.java" -type f -exec sed -i '' \
+  's/import de\.cuioss\.http\.client\.LoaderStatus;/import de.cuioss.sheriff.oauth.core.util.LoaderStatus;/g' {} \;
+
+find src/main/java -name "*.java" -type f -exec sed -i '' \
+  's/import de\.cuioss\.http\.client\.LoadingStatusProvider;/import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;/g' {} \;
+```
+
+**Alternative for Linux (GNU sed):**
+```bash
+cd /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core
+
+# Linux (GNU sed) - no empty string after -i
+find src/main/java -name "*.java" -type f -exec sed -i \
+  's/import de\.cuioss\.http\.client\.LoaderStatus;/import de.cuioss.sheriff.oauth.core.util.LoaderStatus;/g' {} \;
+
+find src/main/java -name "*.java" -type f -exec sed -i \
+  's/import de\.cuioss\.http\.client\.LoadingStatusProvider;/import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;/g' {} \;
+```
+
+**Note:** The environment shows `Platform: darwin` (macOS), so use the macOS syntax above.
+
+==== 2.2: Update Test Imports (Automated)
+
+**Execution:**
+
+**macOS (current environment):**
+```bash
+cd /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core
+
+# Automated replacement (macOS BSD sed syntax)
+find src/test/java -name "*.java" -type f -exec sed -i '' \
+  's/import de\.cuioss\.http\.client\.LoaderStatus;/import de.cuioss.sheriff.oauth.core.util.LoaderStatus;/g' {} \;
+
+find src/test/java -name "*.java" -type f -exec sed -i '' \
+  's/import de\.cuioss\.http\.client\.LoadingStatusProvider;/import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;/g' {} \;
+```
+
+**Files affected:** 12 test files (see section 1.3.2)
+
+==== 2.3: Update JwksLoaderFactory Javadoc
+
+**File:** `/Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/jwks/JwksLoaderFactory.java`
+
+**Line to update:** Line 43 in the Javadoc example
+
+**Current:**
+```java
+ * CompletableFuture&lt;LoaderStatus&gt; initFuture = loader.initJWKSLoader(securityEventCounter);
+```
+
+**Change:** No change needed - this is a type reference in code example, not an import. The type will resolve correctly after migration.
+
+**Verification:** Confirm the Javadoc still renders correctly and the type reference resolves to the new package location.
+
+==== 2.4: Update Documentation
+
+**File:** `/Users/oliver/git/OAuth-Sheriff/doc/specification/technical-components.adoc`
+
+**Changes:**
+1. Find code examples using `LoaderStatus` or `LoadingStatusProvider`
+2. Update package references in text and code blocks from `de.cuioss.http.client` to `de.cuioss.sheriff.oauth.core.util`
+
+**Search locations:**
+```
+Line references found:
+- `getLoaderStatus() == LoaderStatus.OK`
+- `CompletableFuture<LoaderStatus>`
+- `getLoaderStatus()`
+- `LoaderStatus.IN_PROGRESS → LoaderStatus.LOADING`
+- `LoadingStatusProvider` interface
+```
+
+==== 2.5: Build Verification
+
+After all changes:
+```bash
+cd /Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core
+
+# Clean build with all checks
+./mvnw clean verify
+
+# Verify no references to old package remain
+grep -r "de.cuioss.http.client.Loader" src/
+```
+
+Expected: No matches for old package
+
+=== Step 3: Update cui-http Files
+
+==== 3.1: Remove Source Files
+
+**Files to delete:**
+```bash
+rm /Users/oliver/git/cui-http/src/main/java/de/cuioss/http/client/LoaderStatus.java
+rm /Users/oliver/git/cui-http/src/main/java/de/cuioss/http/client/LoadingStatusProvider.java
+rm /Users/oliver/git/cui-http/src/test/java/de/cuioss/http/client/LoadingStatusProviderTest.java
+```
+
+==== 3.2: Update Documentation - client-handlers-readme.adoc
+
+**File:** `/Users/oliver/git/cui-http/doc/client-handlers-readme.adoc`
+
+**Section to remove:** Lines 106-119
+
+```adoc
+=== Loading Status
+
+==== xref:../src/main/java/de/cuioss/http/client/LoadingStatusProvider.java[LoadingStatusProvider]
+
+Interface for components providing loading status.
+
+==== xref:../src/main/java/de/cuioss/http/client/LoaderStatus.java[LoaderStatus]
+
+Enum representing loader states.
+
+* `UNDEFINED` - Initial state
+* `IN_PROGRESS` - Currently loading
+* `ERROR` - Load failed
+* `OK` - Successfully loaded
+```
+
+**Replacement:** None (complete removal)
+
+==== 3.3: Update Documentation - http-result-pattern.adoc
+
+**File:** `/Users/oliver/git/cui-http/doc/http-result-pattern.adoc`
+
+**Strategy:** Remove LoaderStatus references from examples since they demonstrate OAuth-specific patterns
+
+**Locations:** Lines 65-135+ (pattern matching examples)
+
+**Approach: Remove LoaderStatus from examples**
+Replace examples with generic HTTP handling:
+```java
+case HttpResult.Success<WellKnownResult>(var config, var etag, var status) -> {
+    logger.info("Loaded well-known configuration from {}", config.issuer());
+    updateCache(config, etag);
+    yield true; // Success
+}
+
+case HttpResult.Failure<WellKnownResult> failure -> {
+    logger.error(failure.errorMessage(), failure.cause());
+
+    if (failure.fallbackContent() != null) {
+        logger.warn("Using cached well-known configuration");
+        yield true; // Degraded but functional
+    }
+
+    yield failure.isRetryable(); // Retry logic
+}
+```
+
+**Rationale:** Since LoaderStatus moves to OAuth-Sheriff, cui-http documentation should show generic patterns without OAuth-specific types.
+
+==== 3.4: Update Javadoc - HttpResult.java
+
+**File:** `/Users/oliver/git/cui-http/src/main/java/de/cuioss/http/client/result/HttpResult.java`
+
+**Lines affected:** ~74-86 (pattern matching examples)
+
+**Strategy:** Same as 3.3 - remove LoaderStatus references from Javadoc examples
+
+==== 3.5: No Version Update Required
+
+**File:** `/Users/oliver/git/cui-http/pom.xml`
+
+**Current version:** `1.0-SNAPSHOT`
+
+**New version:** `1.0-SNAPSHOT` (no change)
+
+**Justification:** Both projects are pre-1.0, this is an internal refactoring before first release
+
+==== 3.6: Build Verification
+
+```bash
+cd /Users/oliver/git/cui-http
+
+# Verify files are deleted
+ls src/main/java/de/cuioss/http/client/Loader* 2>/dev/null
+# Expected: "No such file or directory"
+
+# Clean build
+./mvnw clean install
+
+# Run pre-commit checks
+./mvnw -Ppre-commit clean verify
+
+# Verify no lingering references
+grep -r "LoaderStatus\|LoadingStatusProvider" src/main/java/
+# Expected: Only in comments/docs explaining removal
+```
+
+== Phase 4: Dependency Management
+
+=== No Dependency Version Changes
+
+**File:** `/Users/oliver/git/OAuth-Sheriff/oauth-sheriff-core/pom.xml`
+
+**Current dependency:**
+```xml
+<dependency>
+    <groupId>de.cuioss</groupId>
+    <artifactId>cui-http</artifactId>
+    <version>1.0-SNAPSHOT</version>
+</dependency>
+```
+
+**Action:** No change required
+
+**Justification:**
+* Both projects remain at 1.0-SNAPSHOT (pre-release refactoring)
+* OAuth-Sheriff will use local types after migration
+* Dependency on cui-http continues for other HTTP utilities (HttpHandler, HttpResult, etc.)
+
+== Phase 5: Testing & Validation
+
+=== Testing Checklist
+
+==== OAuth-Sheriff Testing
+
+[cols="1,3,1"]
+|===
+|Priority |Test Type |Command
+
+|P0
+|Unit tests compile
+|`./mvnw clean compile`
+
+|P0
+|All unit tests pass
+|`./mvnw test`
+
+|P0
+|Integration tests pass
+|`./mvnw verify`
+
+|P0
+|No old package references
+|`grep -r "de.cuioss.http.client.Loader" src/`
+
+|P1
+|Pre-commit checks
+|`./mvnw -Ppre-commit clean verify`
+
+|P1
+|Coverage threshold
+|`./mvnw -Pcoverage clean verify`
+|===
+
+==== cui-http Testing
+
+[cols="1,3,1"]
+|===
+|Priority |Test Type |Command
+
+|P0
+|Build without deleted types
+|`./mvnw clean install`
+
+|P0
+|All tests pass
+|`./mvnw test`
+
+|P0
+|No references remain
+|`grep -r "LoaderStatus\|LoadingStatusProvider" src/`
+
+|P0
+|Module exports still valid
+|Verify `module-info.java` exports unchanged
+
+|P1
+|Pre-commit checks
+|`./mvnw -Ppre-commit clean verify`
+|===
+
+=== Integration Testing Scenarios
+
+==== Scenario 1: JwksLoader Status Check
+```java
+// IssuerConfig.java
+@Override
+public LoaderStatus getLoaderStatus() {
+    if (!enabled) {
+        return LoaderStatus.UNDEFINED;
+    }
+    return jwksLoader.getLoaderStatus();
+}
+```
+
+**Test:** Verify `LoaderStatus` enum resolves to OAuth-Sheriff package
+
+**Expected:** Compilation succeeds, runtime behavior unchanged
+
+==== Scenario 2: Async Initialization
+```java
+// HttpJwksLoader.java
+CompletableFuture<LoaderStatus> future = loader.initJWKSLoader(counter);
+LoaderStatus status = future.get();
+```
+
+**Test:** Verify `CompletableFuture<LoaderStatus>` type resolution
+
+**Expected:** Async operations work identically
+
+==== Scenario 3: Health Check Interface
+```java
+// JwksLoader.java (interface)
+public interface JwksLoader extends LoadingStatusProvider {
+    CompletableFuture<LoaderStatus> initJWKSLoader(...);
+}
+```
+
+**Test:** Verify interface implementation and extension
+
+**Expected:** All implementations compile and pass tests
+
+=== Regression Testing
+
+**Critical paths to verify:**
+
+1. **JWKS Loading:**
+   - HTTP-based JWKS loading with well-known discovery
+   - Manual JWKS URL configuration
+   - Status transitions: UNDEFINED → LOADING → OK/ERROR
+
+2. **Issuer Configuration:**
+   - Multiple issuer support
+   - Enabled/disabled issuers
+   - Status aggregation (issuer delegates to JwksLoader)
+
+3. **Health Monitoring:**
+   - `getLoaderStatus()` non-blocking behavior
+   - `isLoaderStatusOK()` convenience method
+   - Thread-safe concurrent access
+
+4. **Error Handling:**
+   - Network failures → LoaderStatus.ERROR
+   - Retryable errors → LoaderStatus.UNDEFINED (will retry)
+   - Graceful degradation with cached content
+
+== Phase 6: Documentation Updates
+
+=== OAuth-Sheriff Documentation
+
+==== Update Technical Components Specification
+
+**File:** `doc/specification/technical-components.adoc`
+
+**Changes:**
+1. Add section explaining LoaderStatus and LoadingStatusProvider
+2. Update migration notes to indicate types moved from cui-http (if historical context needed)
+3. Ensure all code examples use correct package
+
+**Example addition:**
+```adoc
+=== LoadingStatusProvider and LoaderStatus
+
+==== LoadingStatusProvider Interface
+
+Interface for components providing health status information in OAuth/JWT validation.
+
+[source,java]
+----
+package de.cuioss.sheriff.oauth.core.util;
+
+public interface LoadingStatusProvider {
+    LoaderStatus getLoaderStatus();
+    default boolean isLoaderStatusOK() { ... }
+}
+----
+
+**Implementations:**
+* `JwksLoader` - JWKS key loading status
+* `HttpWellKnownResolver` - Well-known configuration status
+* `IssuerConfig` - Aggregated issuer configuration status
+
+==== LoaderStatus Enum
+
+Status values for loader operations:
+
+* `UNDEFINED` - Initial state, not yet loaded
+* `LOADING` - Load operation in progress
+* `OK` - Successfully loaded and operational
+* `ERROR` - Load failed with non-recoverable error
+
+**Note:** These types provide health status infrastructure for OAuth/JWT validation components.
+```
+
+=== cui-http Documentation
+
+==== No Release Notes Required
+
+Since both projects are pre-1.0-SNAPSHOT, no release notes or changelog entries are needed.
+This is an internal refactoring that will be part of the eventual 1.0 release.
+
+== Phase 7: Final Build and Push
+
+=== Step 1: Final Build of OAuth-Sheriff
+
+```bash
+cd /Users/oliver/git/OAuth-Sheriff
+
+# Clean build with all checks
+./mvnw clean install
+
+# Verify pre-commit checks pass
+./mvnw -Ppre-commit clean verify
+```
+
+**Expected result:** All tests pass, no compilation errors, all quality checks green.
+
+=== Step 2: Commit OAuth-Sheriff Changes
+
+```bash
+cd /Users/oliver/git/OAuth-Sheriff
+
+# Check status
+git status
+
+# Review changes
+git diff
+
+# Stage all changes
+git add .
+
+# Commit with descriptive message
+git commit -m "$(cat <<'EOF'
+refactor: move LoaderStatus types from cui-http to util package
+
+- Move LoaderStatus enum to de.cuioss.sheriff.oauth.core.util
+- Move LoadingStatusProvider interface to de.cuioss.sheriff.oauth.core.util
+- Move LoadingStatusProviderTest to de.cuioss.sheriff.oauth.core.util
+- Update all imports in 18 files (6 main + 12 test)
+- Update Javadoc references in JwksLoaderFactory
+- Update documentation with new package references
+
+These types are OAuth/JWT-specific and belong in OAuth-Sheriff.
+Pre-1.0 refactoring for better code cohesion.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+=== Step 3: Push OAuth-Sheriff Changes
+
+```bash
+cd /Users/oliver/git/OAuth-Sheriff
+
+# Push to remote
+git push origin feature/integrate_cui_http_changes
+
+# Verify push succeeded
+git log -1 --oneline
+```
+
+=== Step 4: Final Build of cui-http
+
+```bash
+cd /Users/oliver/git/cui-http
+
+# Clean build with all checks
+./mvnw clean install
+
+# Verify pre-commit checks pass
+./mvnw -Ppre-commit clean verify
+```
+
+**Expected result:** All tests pass, no compilation errors, no references to removed types.
+
+=== Step 5: Commit cui-http Changes
+
+```bash
+cd /Users/oliver/git/cui-http
+
+# Check status
+git status
+
+# Review changes
+git diff
+
+# Stage all changes
+git add .
+
+# Commit with descriptive message
+git commit -m "$(cat <<'EOF'
+refactor: remove OAuth-specific LoaderStatus types
+
+- Remove LoaderStatus enum (moved to OAuth-Sheriff)
+- Remove LoadingStatusProvider interface (moved to OAuth-Sheriff)
+- Remove LoadingStatusProviderTest (moved to OAuth-Sheriff)
+- Update documentation to remove LoaderStatus examples
+- Update HttpResult Javadoc to remove OAuth-specific patterns
+
+These types are OAuth/JWT-specific and only used by OAuth-Sheriff.
+Pre-1.0 cleanup for better separation of concerns.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+=== Step 6: Push cui-http Changes
+
+```bash
+cd /Users/oliver/git/cui-http
+
+# Push to remote (adjust branch name as needed)
+git push origin main
+
+# Verify push succeeded
+git log -1 --oneline
+```
+
+=== Step 7: Verification
+
+After pushing both projects:
+
+**OAuth-Sheriff:**
+```bash
+cd /Users/oliver/git/OAuth-Sheriff
+git log -1 --stat
+# Should show new files in de/cuioss/sheriff/oauth/core/util/
+```
+
+**cui-http:**
+```bash
+cd /Users/oliver/git/cui-http
+git log -1 --stat
+# Should show deleted LoaderStatus files
+```
+
+**Remote verification:**
+```bash
+# OAuth-Sheriff: Verify remote has changes
+cd /Users/oliver/git/OAuth-Sheriff
+git fetch origin
+git log origin/feature/integrate_cui_http_changes -1
+
+# cui-http: Verify remote has changes
+cd /Users/oliver/git/cui-http
+git fetch origin
+git log origin/main -1
+```
+
+== Phase 8: Success Criteria
+
+=== Definition of Done
+
+==== OAuth-Sheriff
+- [ ] `LoaderStatus.java` exists in `de.cuioss.sheriff.oauth.core.util` package
+- [ ] `LoadingStatusProvider.java` exists in `de.cuioss.sheriff.oauth.core.util` package
+- [ ] `LoadingStatusProviderTest.java` exists in test package
+- [ ] All 18 files updated with new package (6 main source imports + 1 main Javadoc + 12 test imports - 1 test with Javadoc only)
+- [ ] Documentation updated with correct package references
+- [ ] All unit tests pass (`./mvnw test`)
+- [ ] All integration tests pass (`./mvnw verify`)
+- [ ] Pre-commit checks pass (`./mvnw -Ppre-commit clean verify`)
+- [ ] No references to `de.cuioss.http.client.Loader*` remain (except in comments if documented)
+- [ ] Coverage thresholds maintained
+
+==== cui-http
+- [ ] `LoaderStatus.java` removed from source
+- [ ] `LoadingStatusProvider.java` removed from source
+- [ ] `LoadingStatusProviderTest.java` removed from tests
+- [ ] Documentation updated (client-handlers-readme.adoc)
+- [ ] Documentation updated (http-result-pattern.adoc)
+- [ ] Javadoc updated (HttpResult.java)
+- [ ] Version remains 1.0-SNAPSHOT (no change needed)
+- [ ] All tests pass (`./mvnw test`)
+- [ ] Pre-commit checks pass (`./mvnw -Ppre-commit clean verify`)
+- [ ] No dangling references to deleted types
+- [ ] Module exports verified (de.cuioss.http.client package)
+
+==== Integration
+- [ ] OAuth-Sheriff compiles against cui-http 1.0-SNAPSHOT
+- [ ] No runtime regressions in OAuth-Sheriff test suite
+- [ ] Health checking works identically to before migration
+- [ ] Async initialization patterns unchanged
+- [ ] Both projects' CI/CD pipelines pass
+
+==== Git Operations
+- [ ] OAuth-Sheriff: Final build successful (`./mvnw clean install`)
+- [ ] OAuth-Sheriff: Pre-commit checks pass (`./mvnw -Ppre-commit clean verify`)
+- [ ] OAuth-Sheriff: Changes committed with proper message
+- [ ] OAuth-Sheriff: Changes pushed to `origin/feature/integrate_cui_http_changes`
+- [ ] OAuth-Sheriff: Remote branch verified with `git log origin/feature/integrate_cui_http_changes -1`
+- [ ] cui-http: Final build successful (`./mvnw clean install`)
+- [ ] cui-http: Pre-commit checks pass (`./mvnw -Ppre-commit clean verify`)
+- [ ] cui-http: Changes committed with proper message
+- [ ] cui-http: Changes pushed to remote branch
+- [ ] cui-http: Remote branch verified with `git log`
+
+== Appendix A: File Statistics
+
+=== Lines of Code by File
+
+[cols="2,1,1"]
+|===
+|File |Total Lines |Code Lines (approx)
+
+|LoaderStatus.java |50 |30
+|LoadingStatusProvider.java |88 |40
+|LoadingStatusProviderTest.java |179 |120
+|**Total** |**317** |**190**
+|===
+
+=== Import Statements to Update
+
+**Pattern:**
+```java
+import de.cuioss.http.client.LoaderStatus;
+import de.cuioss.http.client.LoadingStatusProvider;
+```
+
+**Replacement:**
+```java
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
+```
+
+**Total occurrences:** 18 files (7 main + 11 test)
+
+=== Documentation References to Update
+
+[cols="1,2,1"]
+|===
+|Project |File |Occurrences
+
+|cui-http |client-handlers-readme.adoc |2 sections
+|cui-http |http-result-pattern.adoc |~5 examples
+|cui-http |HttpResult.java (Javadoc) |~3 examples
+|OAuth-Sheriff |technical-components.adoc |~5 references
+|===
+
+== Summary
+
+This migration plan provides a step-by-step technical approach to moving LoaderStatus and
+LoadingStatusProvider from cui-http to OAuth-Sheriff. The plan includes:
+
+* File-by-file change list with exact paths and package names
+* Automated sed scripts for import replacement (with OS-specific syntax)
+* Comprehensive testing procedures
+* Clear success criteria with checklists
+* Branch strategy and prerequisites (Phase 0)
+* Critical pre-execution checks (Phase 3)
+
+=== Document Revisions
+
+This migration plan has been reviewed and corrected for the following issues:
+
+**1. File Count Discrepancy (CORRECTED):**
+* Original plan claimed "7 main source files"
+* Actual count: 6 main source files with imports + 1 with Javadoc reference only
+* Corrected in sections: 1.3.1, 2.1, Phase 8 success criteria, commit message
+
+**2. JwksLoaderFactory Clarification (ADDED):**
+* This file contains a Javadoc code example mentioning `LoaderStatus` but no import statement
+* Added section 2.3 explaining no import change needed, only verification required
+* Updated file list to explicitly show this distinction
+
+**3. Branch Strategy (ADDED):**
+* Added Phase 0 documenting branch strategy for both repositories
+* OAuth-Sheriff: `feature/integrate_cui_http_changes` → PR to `main`
+* cui-http: Direct to `main` (with note about optional feature branch)
+
+**4. Pre-Execution Checks (ADDED):**
+* Added Critical Pre-Execution Checks section before Step 1
+* Includes: directory existence, file conflicts, branch verification, clean working directory
+* Reduces risk of execution errors
+
+**5. OS-Specific sed Syntax (CLARIFIED):**
+* Separated macOS (BSD) and Linux (GNU) sed command syntax
+* Noted current environment is macOS (darwin platform)
+* Prevents confusion during automated import replacement
+
+**6. Success Criteria Precision (CORRECTED):**
+* Updated to reflect accurate file counts
+* Clarified "18 files updated" breakdown: 6 main imports + 1 main Javadoc + 12 test imports
+* Updated commit message to match
+
+These corrections ensure 100% accuracy and remove all ambiguities for implementation.

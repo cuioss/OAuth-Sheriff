@@ -15,7 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.health;
 
-import de.cuioss.http.client.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
 import de.cuioss.sheriff.oauth.core.jwks.JwksLoader;
 import de.cuioss.sheriff.oauth.core.jwks.JwksType;
