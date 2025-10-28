@@ -25,6 +25,7 @@ import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
 import de.cuioss.tools.logging.CuiLogger;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * HTTP-based implementation for resolving OpenID Connect well-known configuration endpoints.
@@ -37,9 +38,8 @@ import java.util.Optional;
  * subsequent endpoint lookups. It provides methods to access common OIDC endpoints
  * like JWKS URI, issuer, authorization endpoint, etc.
  * <p>
- * <strong>Thread Safety:</strong> This class uses volatile fields for thread visibility.
- * Race conditions may cause duplicate requests, but ETag caching makes this acceptable
- * (duplicate requests result in 304 Not Modified responses).
+ * <strong>Thread Safety:</strong> This class uses AtomicReference for lock-free thread-safe caching.
+ * The compareAndSet pattern prevents duplicate loads while allowing concurrent access.
  *
  * @author Oliver Wolff
  * @since 1.0
@@ -49,8 +49,8 @@ public class HttpWellKnownResolver implements LoadingStatusProvider {
     private static final CuiLogger LOGGER = new CuiLogger(HttpWellKnownResolver.class);
 
     private final HttpAdapter<WellKnownResult> wellKnownAdapter;
-    private volatile HttpResult<WellKnownResult> cachedResult;
-    private volatile LoaderStatus status = LoaderStatus.UNDEFINED;
+    private final AtomicReference<HttpResult<WellKnownResult>> cachedResult = new AtomicReference<>();
+    private final AtomicReference<LoaderStatus> status = new AtomicReference<>(LoaderStatus.UNDEFINED);
 
     /**
      * Creates a new HttpWellKnownResolver with the specified configuration.
@@ -79,29 +79,25 @@ public class HttpWellKnownResolver implements LoadingStatusProvider {
     }
 
     /**
-     * Ensures the well-known configuration is loaded and cached.
+     * Ensures the well-known configuration is loaded and cached using thread-safe lazy initialization.
      * <p>
-     * This method maintains backward compatibility by providing a synchronous API
-     * while using async operations internally. It blocks on the CompletableFuture
-     * returned by the adapter using {@code .join()}.
-     * <p>
-     * The method handles status tracking manually since HttpAdapter does not expose
-     * a getLoaderStatus() method.
+     * Uses AtomicReference.updateAndGet for lock-free thread-safe caching. The atomic update ensures
+     * only one thread performs the HTTP load, while racing threads get the cached result.
      *
      * @return Optional containing the WellKnownResult if available and valid, empty otherwise
      */
     private Optional<WellKnownResult> ensureLoaded() {
-        if (cachedResult == null) {
-            status = LoaderStatus.LOADING;
-            // Convert async operation to sync for backward compatibility
-            cachedResult = wellKnownAdapter.get().join();
-            // Update status based on result
-            status = cachedResult.isSuccess() ? LoaderStatus.OK : LoaderStatus.ERROR;
-        }
-        if (cachedResult.isSuccess()) {
-            return cachedResult.getContent();
-        }
-        return Optional.empty();
+        HttpResult<WellKnownResult> result = cachedResult.updateAndGet(current -> {
+            if (current == null) {
+                status.set(LoaderStatus.LOADING);
+                HttpResult<WellKnownResult> loaded = wellKnownAdapter.getBlocking();
+                status.set(loaded.isSuccess() ? LoaderStatus.OK : LoaderStatus.ERROR);
+                return loaded;
+            }
+            return current;
+        });
+
+        return result.isSuccess() ? result.getContent() : Optional.empty();
     }
 
     /**
@@ -161,13 +157,12 @@ public class HttpWellKnownResolver implements LoadingStatusProvider {
     /**
      * Checks the health status of the well-known resolver.
      * <p>
-     * Since HttpAdapter does not expose a getLoaderStatus() method, this implementation
-     * manually tracks the loading status through the {@link #status} field.
+     * Returns the current loading status tracked through the {@link #status} field.
      *
      * @return the current LoaderStatus indicating health state
      */
     @Override
     public LoaderStatus getLoaderStatus() {
-        return status;
+        return status.get();
     }
 }
