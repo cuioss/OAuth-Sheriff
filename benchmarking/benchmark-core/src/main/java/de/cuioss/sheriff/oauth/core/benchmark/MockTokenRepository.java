@@ -113,6 +113,7 @@ public class MockTokenRepository implements TokenProvider {
     /**
      * Creates a new MockTokenRepository with the specified configuration
      */
+    @SuppressWarnings("java:S2245") // ok for test-code
     public MockTokenRepository(Config config) {
         this.config = config;
         this.random = new Random(config.randomSeed);

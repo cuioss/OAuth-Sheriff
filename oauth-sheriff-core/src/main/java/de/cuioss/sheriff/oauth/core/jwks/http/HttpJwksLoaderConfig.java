@@ -15,11 +15,9 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks.http;
 
-import de.cuioss.http.client.HttpHandlerProvider;
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.http.client.handler.HttpHandler;
 import de.cuioss.http.client.handler.SecureSSLContextProvider;
-import de.cuioss.http.client.retry.RetryStrategies;
-import de.cuioss.http.client.retry.RetryStrategy;
 import de.cuioss.sheriff.oauth.core.JWTValidationLogMessages;
 import de.cuioss.sheriff.oauth.core.JWTValidationLogMessages.WARN;
 import de.cuioss.sheriff.oauth.core.ParserConfig;
@@ -56,7 +54,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 @ToString
 @EqualsAndHashCode
-public class HttpJwksLoaderConfig implements HttpHandlerProvider {
+public class HttpJwksLoaderConfig {
 
     private static final CuiLogger LOGGER = new CuiLogger(HttpJwksLoaderConfig.class);
 
@@ -105,10 +103,10 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
     private final WellKnownConfig wellKnownConfig;
 
     /**
-     * The retry strategy for HTTP operations.
+     * The retry configuration for HTTP operations.
      */
     @Getter
-    private final RetryStrategy retryStrategy;
+    private final RetryConfig retryConfig;
 
     /**
      * The ScheduledExecutorService used for background refresh operations.
@@ -141,7 +139,7 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
     private HttpJwksLoaderConfig(int refreshIntervalSeconds,
             HttpHandler httpHandler,
             WellKnownConfig wellKnownConfig,
-            RetryStrategy retryStrategy,
+            RetryConfig retryConfig,
             ScheduledExecutorService scheduledExecutorService,
             String issuerIdentifier,
             Duration keyRotationGracePeriod,
@@ -149,7 +147,7 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
         this.refreshIntervalSeconds = refreshIntervalSeconds;
         this.httpHandler = httpHandler;
         this.wellKnownConfig = wellKnownConfig;
-        this.retryStrategy = retryStrategy;
+        this.retryConfig = retryConfig;
         this.scheduledExecutorService = scheduledExecutorService;
         this.issuerIdentifier = issuerIdentifier;
         this.keyRotationGracePeriod = keyRotationGracePeriod;
@@ -168,7 +166,6 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
      * @return the HttpHandler instance, never null
      * @throws IllegalStateException if no HttpHandler is available in either mode
      */
-    @Override
     public HttpHandler getHttpHandler() {
         if (httpHandler != null) {
             // Direct HTTP mode - return the configured HttpHandler
@@ -252,7 +249,7 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
     public static class HttpJwksLoaderConfigBuilder {
         private Integer refreshIntervalSeconds = DEFAULT_REFRESH_INTERVAL_IN_SECONDS;
         private final HttpHandler.HttpHandlerBuilder httpHandlerBuilder;
-        private RetryStrategy retryStrategy;
+        private RetryConfig retryConfig;
         private ScheduledExecutorService scheduledExecutorService;
         private WellKnownConfig wellKnownConfig;
         private String issuerIdentifier;
@@ -364,7 +361,7 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
             this.endpointSource = EndpointSource.WELL_KNOWN_URL;
             this.wellKnownConfig = WellKnownConfig.builder()
                     .wellKnownUrl(wellKnownUrl)
-                    .retryStrategy(RetryStrategies.exponentialBackoff())
+                    .retryConfig(RetryConfig.defaults())
                     .parserConfig(ParserConfig.builder().build())
                     .build();
             return this;
@@ -391,7 +388,7 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
             this.endpointSource = EndpointSource.WELL_KNOWN_URI;
             this.wellKnownConfig = WellKnownConfig.builder()
                     .wellKnownUri(wellKnownUri)
-                    .retryStrategy(RetryStrategies.exponentialBackoff())
+                    .retryConfig(RetryConfig.defaults())
                     .parserConfig(ParserConfig.builder().build())
                     .build();
             return this;
@@ -466,14 +463,14 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
         }
 
         /**
-         * Sets the retry strategy for HTTP operations.
+         * Sets the retry configuration for HTTP operations.
          *
-         * @param retryStrategy the retry strategy to use for HTTP requests
+         * @param retryConfig the retry configuration to use for HTTP requests
          * @return this builder instance
-         * @throws IllegalArgumentException if retryStrategy is null
+         * @throws IllegalArgumentException if retryConfig is null
          */
-        public HttpJwksLoaderConfigBuilder retryStrategy(RetryStrategy retryStrategy) {
-            this.retryStrategy = retryStrategy;
+        public HttpJwksLoaderConfigBuilder retryConfig(RetryConfig retryConfig) {
+            this.retryConfig = retryConfig;
             return this;
         }
 
@@ -526,9 +523,9 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
                         "No JWKS endpoint configured. Must call one of: jwksUri(), jwksUrl(), wellKnownUrl(), or wellKnownUri()");
             }
 
-            // Ensure RetryStrategy is configured
-            if (retryStrategy == null) {
-                retryStrategy = RetryStrategies.exponentialBackoff();
+            // Ensure RetryConfig is configured
+            if (retryConfig == null) {
+                retryConfig = RetryConfig.defaults();
             }
 
             HttpHandler jwksHttpHandler = null;
@@ -574,7 +571,7 @@ public class HttpJwksLoaderConfig implements HttpHandlerProvider {
                     refreshIntervalSeconds,
                     jwksHttpHandler,
                     configuredWellKnownConfig,
-                    retryStrategy,
+                    retryConfig,
                     executor,
                     issuerIdentifier,
                     keyRotationGracePeriod,

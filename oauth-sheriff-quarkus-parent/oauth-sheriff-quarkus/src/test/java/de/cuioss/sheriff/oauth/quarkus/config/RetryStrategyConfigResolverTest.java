@@ -15,8 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.config;
 
-import de.cuioss.http.client.retry.ExponentialBackoffRetryStrategy;
-import de.cuioss.http.client.retry.RetryStrategy;
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.quarkus.test.TestConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,19 +38,19 @@ class RetryStrategyConfigResolverTest {
     }
 
     @Test
-    @DisplayName("should resolve retry strategy with default values")
+    @DisplayName("should resolve retry config with default values")
     void shouldResolveWithDefaults() {
         TestConfig config = new TestConfig(Map.of());
         RetryStrategyConfigResolver resolver = new RetryStrategyConfigResolver(config);
 
-        RetryStrategy result = resolver.resolveRetryStrategy();
+        RetryConfig result = resolver.resolveRetryConfig();
 
         assertNotNull(result);
-        assertInstanceOf(ExponentialBackoffRetryStrategy.class, result);
+        assertEquals(5, result.maxAttempts());
     }
 
     @Test
-    @DisplayName("should resolve retry strategy with custom values")
+    @DisplayName("should resolve retry config with custom values")
     void shouldResolveWithCustomValues() {
         TestConfig config = new TestConfig(Map.of(
                 JwtPropertyKeys.RETRY.MAX_ATTEMPTS, "3",
@@ -62,24 +61,28 @@ class RetryStrategyConfigResolverTest {
         ));
         RetryStrategyConfigResolver resolver = new RetryStrategyConfigResolver(config);
 
-        RetryStrategy result = resolver.resolveRetryStrategy();
+        RetryConfig result = resolver.resolveRetryConfig();
 
         assertNotNull(result);
-        assertInstanceOf(ExponentialBackoffRetryStrategy.class, result);
+        assertEquals(3, result.maxAttempts());
+        assertEquals(500, result.initialDelay().toMillis());
+        assertEquals(10000, result.maxDelay().toMillis());
+        assertEquals(1.5, result.multiplier());
+        assertEquals(0.2, result.jitter());
     }
 
     @Test
-    @DisplayName("should return no-op strategy when retry is disabled")
+    @DisplayName("should return no-retry config when retry is disabled")
     void shouldReturnNoOpWhenDisabled() {
         TestConfig config = new TestConfig(Map.of(
                 JwtPropertyKeys.RETRY.ENABLED, "false"
         ));
         RetryStrategyConfigResolver resolver = new RetryStrategyConfigResolver(config);
 
-        RetryStrategy result = resolver.resolveRetryStrategy();
+        RetryConfig result = resolver.resolveRetryConfig();
 
         assertNotNull(result);
-        assertFalse(result instanceof ExponentialBackoffRetryStrategy, "Should return no-op strategy, not ExponentialBackoffRetryStrategy");
+        assertEquals(1, result.maxAttempts(), "Should have maxAttempts=1 (no retries) when retry is disabled");
     }
 
     @Test
@@ -88,11 +91,10 @@ class RetryStrategyConfigResolverTest {
         TestConfig config = new TestConfig(Map.of());
         RetryStrategyConfigResolver resolver = new RetryStrategyConfigResolver(config);
 
-        RetryStrategy result = resolver.resolveRetryStrategy();
+        RetryConfig result = resolver.resolveRetryConfig();
 
         assertNotNull(result);
-        assertInstanceOf(ExponentialBackoffRetryStrategy.class, result);
-        assertNotEquals(RetryStrategy.none(), result);
+        assertTrue(result.maxAttempts() > 0, "Should have maxAttempts > 0 when retry is enabled by default");
     }
 
     @Test
@@ -104,10 +106,10 @@ class RetryStrategyConfigResolverTest {
         ));
         RetryStrategyConfigResolver resolver = new RetryStrategyConfigResolver(config);
 
-        RetryStrategy result = resolver.resolveRetryStrategy();
+        RetryConfig result = resolver.resolveRetryConfig();
 
         assertNotNull(result);
-        assertInstanceOf(ExponentialBackoffRetryStrategy.class, result);
+        assertEquals(2, result.maxAttempts());
     }
 
     @Test
@@ -119,10 +121,11 @@ class RetryStrategyConfigResolverTest {
         ));
         RetryStrategyConfigResolver resolver = new RetryStrategyConfigResolver(config);
 
-        RetryStrategy result = resolver.resolveRetryStrategy();
+        RetryConfig result = resolver.resolveRetryConfig();
 
         assertNotNull(result);
-        assertInstanceOf(ExponentialBackoffRetryStrategy.class, result);
+        assertEquals(10, result.maxAttempts());
+        assertEquals(2000, result.initialDelay().toMillis());
     }
 
 }

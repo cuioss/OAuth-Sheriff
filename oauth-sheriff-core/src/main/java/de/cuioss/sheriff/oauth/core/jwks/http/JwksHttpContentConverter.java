@@ -16,6 +16,7 @@
 package de.cuioss.sheriff.oauth.core.jwks.http;
 
 import com.dslplatform.json.DslJson;
+import de.cuioss.http.client.ContentType;
 import de.cuioss.http.client.converter.StringContentConverter;
 import de.cuioss.sheriff.oauth.core.ParserConfig;
 import de.cuioss.sheriff.oauth.core.json.Jwks;
@@ -68,7 +69,7 @@ public class JwksHttpContentConverter extends StringContentConverter<Jwks> {
     protected Optional<Jwks> convertString(String rawContent) {
         if (rawContent == null || rawContent.trim().isEmpty()) {
             LOGGER.debug("Empty or null JWKS content received");
-            return Optional.of(emptyValue());
+            return Optional.empty();
         }
 
         try {
@@ -91,7 +92,7 @@ public class JwksHttpContentConverter extends StringContentConverter<Jwks> {
     }
 
     @Override
-    public Jwks emptyValue() {
-        return Jwks.empty();
+    public ContentType contentType() {
+        return ContentType.APPLICATION_JSON;
     }
 }

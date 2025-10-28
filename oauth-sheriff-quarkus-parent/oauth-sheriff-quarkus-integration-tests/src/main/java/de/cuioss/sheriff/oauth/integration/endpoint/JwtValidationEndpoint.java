@@ -46,6 +46,7 @@ import java.util.Map;
 public class JwtValidationEndpoint {
 
     private static final CuiLogger LOGGER = new CuiLogger(JwtValidationEndpoint.class);
+    public static final String NOT_PRESENT = "not-present";
 
     private final TokenValidator tokenValidator;
     private final Instance<BearerTokenResult> basicToken;
@@ -306,7 +307,7 @@ public class JwtValidationEndpoint {
                 .orElseThrow(() -> new IllegalStateException("Token content missing after successful authorization"));
 
         // Extract token data
-        String userId = token.getSubject().orElse("not-present");
+        String userId = token.getSubject().orElse(NOT_PRESENT);
         LOGGER.debug("Token subject: %s, scopes: %s", userId, token.getScopes());
 
         // Build response with token details
@@ -414,11 +415,11 @@ public class JwtValidationEndpoint {
     private ValidationResponse createTokenResponse(AccessTokenContent token, String message) {
         // Use HashMap to handle Optional values from getSubject() and getEmail()
         var data = new HashMap<String, Object>();
-        data.put("subject", token.getSubject().orElse("not-present"));
+        data.put("subject", token.getSubject().orElse(NOT_PRESENT));
         data.put("scopes", token.getScopes());
         data.put("roles", token.getRoles());
         data.put("groups", token.getGroups());
-        data.put("email", token.getEmail().orElse("not-present"));
+        data.put("email", token.getEmail().orElse(NOT_PRESENT));
 
         return new ValidationResponse(true, message, data);
     }

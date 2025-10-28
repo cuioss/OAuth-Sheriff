@@ -76,13 +76,13 @@ class WellKnownConfigTest {
     }
 
     @Test
-    @DisplayName("Should use default exponential backoff when RetryStrategy not specified")
-    void shouldUseDefaultRetryStrategy() {
+    @DisplayName("Should use default exponential backoff when RetryConfig not specified")
+    void shouldUseDefaultRetryConfig() {
         WellKnownConfig config = WellKnownConfig.builder()
                 .wellKnownUrl(TEST_WELL_KNOWN_URL)
                 .build();
 
-        assertNotNull(config.getRetryStrategy());
+        assertNotNull(config.getRetryConfig());
         // Should be exponential backoff strategy by default
         assertNotNull(config.getHttpHandler());
     }

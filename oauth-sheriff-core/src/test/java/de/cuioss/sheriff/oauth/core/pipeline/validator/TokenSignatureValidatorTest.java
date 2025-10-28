@@ -15,7 +15,6 @@
  */
 package de.cuioss.sheriff.oauth.core.pipeline.validator;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.JWTValidationLogMessages;
 import de.cuioss.sheriff.oauth.core.TokenType;
 import de.cuioss.sheriff.oauth.core.exception.TokenValidationException;
@@ -31,6 +30,7 @@ import de.cuioss.sheriff.oauth.core.test.InMemoryJWKSFactory;
 import de.cuioss.sheriff.oauth.core.test.InMemoryKeyMaterialHandler;
 import de.cuioss.sheriff.oauth.core.test.TestTokenHolder;
 import de.cuioss.sheriff.oauth.core.test.generator.ClaimControlParameter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.test.generator.junit.EnableGeneratorController;
 import de.cuioss.test.juli.LogAsserts;
 import de.cuioss.test.juli.TestLogLevel;

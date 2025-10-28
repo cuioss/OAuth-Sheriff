@@ -15,14 +15,14 @@
  */
 package de.cuioss.sheriff.oauth.core;
 
-import de.cuioss.http.client.LoaderStatus;
-import de.cuioss.http.client.LoadingStatusProvider;
 import de.cuioss.sheriff.oauth.core.domain.claim.mapper.ClaimMapper;
 import de.cuioss.sheriff.oauth.core.jwks.JwksLoader;
 import de.cuioss.sheriff.oauth.core.jwks.JwksLoaderFactory;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoaderConfig;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
 import de.cuioss.sheriff.oauth.core.security.SignatureAlgorithmPreferences;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
 import de.cuioss.tools.base.Preconditions;
 import de.cuioss.tools.logging.CuiLogger;
 import lombok.EqualsAndHashCode;

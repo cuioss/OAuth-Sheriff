@@ -15,10 +15,10 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks;
 
-import de.cuioss.http.client.LoaderStatus;
-import de.cuioss.http.client.LoadingStatusProvider;
 import de.cuioss.sheriff.oauth.core.jwks.key.KeyInfo;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
+import de.cuioss.sheriff.oauth.core.util.LoadingStatusProvider;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;

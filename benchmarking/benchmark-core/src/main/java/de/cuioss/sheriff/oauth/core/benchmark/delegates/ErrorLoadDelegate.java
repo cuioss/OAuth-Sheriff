@@ -133,6 +133,7 @@ public class ErrorLoadDelegate extends BenchmarkDelegate {
      *
      * @return the selected token
      */
+    @SuppressWarnings("java:S2245") // ok for test-code
     public String selectToken() {
         // ThreadLocalRandom is safe for benchmarking - it provides thread-safe pseudorandom numbers
         int random = ThreadLocalRandom.current().nextInt(100);

@@ -15,6 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.core.well_known;
 
+import de.cuioss.http.client.ContentType;
 import de.cuioss.sheriff.oauth.core.JWTValidationLogMessages;
 import de.cuioss.sheriff.oauth.core.ParserConfig;
 import de.cuioss.sheriff.oauth.core.exception.TokenValidationException;
@@ -218,16 +219,11 @@ class WellKnownResultConverterTest {
     }
 
     @Test
-    @DisplayName("Should provide empty value sentinel")
-    void shouldProvideEmptyValueSentinel() {
-        WellKnownResult emptyValue = converter.emptyValue();
+    @DisplayName("Should return APPLICATION_JSON content type")
+    void shouldReturnApplicationJsonContentType() {
+        var contentType = converter.contentType();
 
-        assertNotNull(emptyValue);
-        assertSame(WellKnownResult.EMPTY, emptyValue);
-        assertTrue(emptyValue.isEmpty());
-        assertEquals("about:empty", emptyValue.issuer());
-        assertEquals("about:empty", emptyValue.jwksUri());
-        assertNull(emptyValue.authorizationEndpoint());
-        assertNull(emptyValue.tokenEndpoint());
+        assertNotNull(contentType);
+        assertEquals(ContentType.APPLICATION_JSON, contentType);
     }
 }

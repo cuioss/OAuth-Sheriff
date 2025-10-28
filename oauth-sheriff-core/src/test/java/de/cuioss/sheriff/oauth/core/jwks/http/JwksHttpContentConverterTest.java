@@ -15,6 +15,7 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks.http;
 
+import de.cuioss.http.client.ContentType;
 import de.cuioss.sheriff.oauth.core.json.Jwks;
 import de.cuioss.test.juli.LogAsserts;
 import de.cuioss.test.juli.TestLogLevel;
@@ -48,10 +49,10 @@ class JwksHttpContentConverterTest {
     }
 
     @Test
-    void shouldReturnEmptyJwksForEmptyValue() {
-        Jwks empty = converter.emptyValue();
-        assertNotNull(empty);
-        assertTrue(empty.isEmpty());
+    void shouldReturnApplicationJsonContentType() {
+        var contentType = converter.contentType();
+        assertNotNull(contentType);
+        assertEquals(ContentType.APPLICATION_JSON, contentType);
     }
 
     @Test
@@ -82,8 +83,8 @@ class JwksHttpContentConverterTest {
     @ValueSource(strings = {"", "   \n\t   "})
     void shouldReturnEmptyForInvalidContent(String content) {
         Optional<Jwks> result = converter.convert(content);
-        assertTrue(result.isPresent());
-        assertTrue(result.get().isEmpty());
+        // After migration: empty/null content returns Optional.empty() instead of Optional.of(Jwks.empty())
+        assertTrue(result.isEmpty());
     }
 
     @Test

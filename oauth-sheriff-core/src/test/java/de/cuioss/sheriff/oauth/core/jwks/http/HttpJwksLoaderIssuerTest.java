@@ -100,9 +100,9 @@ class HttpJwksLoaderIssuerTest {
         Optional<String> issuer = jwksLoader.getIssuerIdentifier();
         assertFalse(issuer.isPresent(), "Issuer should not be present when config fails to load");
 
-        // Verify the HTTP status warning was logged (when well-known config fails to load with 500 error)
+        // After migration: ResilientHttpAdapter logs HTTP-111 (REQUEST_FAILED_MAX_ATTEMPTS) instead of HTTP-101
         LogAsserts.assertLogMessagePresentContaining(TestLogLevel.WARN,
-                HttpLogMessages.WARN.HTTP_STATUS_WARNING.resolveIdentifierString());
+                HttpLogMessages.WARN.REQUEST_FAILED_MAX_ATTEMPTS.resolveIdentifierString());
     }
 
     @Test

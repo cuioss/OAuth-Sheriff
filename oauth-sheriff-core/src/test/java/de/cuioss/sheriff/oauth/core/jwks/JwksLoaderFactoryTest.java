@@ -15,13 +15,13 @@
  */
 package de.cuioss.sheriff.oauth.core.jwks;
 
-import de.cuioss.http.client.LoaderStatus;
-import de.cuioss.http.client.retry.RetryStrategy;
+import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoader;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoaderConfig;
 import de.cuioss.sheriff.oauth.core.jwks.key.JWKSKeyLoader;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
 import de.cuioss.sheriff.oauth.core.test.InMemoryJWKSFactory;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -67,7 +67,7 @@ class JwksLoaderFactoryTest {
         HttpJwksLoaderConfig config = HttpJwksLoaderConfig.builder()
                 .jwksUrl("https://example.com/.well-known/jwks.json")
                 .issuerIdentifier("test-issuer")
-                .retryStrategy(RetryStrategy.none()) // No retry to avoid delays - HTTP functionality tested in ResilientHttpHandler
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build()) // No retry to avoid delays - HTTP functionality tested in ResilientHttpAdapter
                 .build();
         JwksLoader loader = JwksLoaderFactory.createHttpLoader(config);
         loader.initJWKSLoader(securityEventCounter).join();
@@ -86,7 +86,7 @@ class JwksLoaderFactoryTest {
 
         HttpJwksLoaderConfig config = HttpJwksLoaderConfig.builder()
                 .wellKnownUrl("https://example.com/.well-known/openid-configuration")
-                .retryStrategy(RetryStrategy.none()) // No retry to avoid delays - HTTP functionality tested in ResilientHttpHandler
+                .retryConfig(RetryConfig.builder().maxAttempts(1).build()) // No retry to avoid delays - HTTP functionality tested in ResilientHttpAdapter
                 .build();
         JwksLoader loader = JwksLoaderFactory.createHttpLoader(config);
         loader.initJWKSLoader(securityEventCounter).join();

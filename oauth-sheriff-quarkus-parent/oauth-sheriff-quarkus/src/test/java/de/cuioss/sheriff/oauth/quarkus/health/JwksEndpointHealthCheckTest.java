@@ -15,12 +15,12 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.health;
 
-import de.cuioss.http.client.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
 import de.cuioss.sheriff.oauth.core.jwks.JwksLoader;
 import de.cuioss.sheriff.oauth.core.jwks.JwksType;
 import de.cuioss.sheriff.oauth.core.jwks.key.KeyInfo;
 import de.cuioss.sheriff.oauth.core.security.SecurityEventCounter;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.sheriff.oauth.quarkus.config.JwtTestProfile;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
 import io.quarkus.test.junit.QuarkusTest;

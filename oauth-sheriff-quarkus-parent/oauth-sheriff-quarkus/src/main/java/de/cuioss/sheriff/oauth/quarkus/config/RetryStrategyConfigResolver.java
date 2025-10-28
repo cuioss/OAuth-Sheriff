@@ -15,16 +15,15 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.config;
 
-import de.cuioss.http.client.retry.ExponentialBackoffRetryStrategy;
-import de.cuioss.http.client.retry.RetryStrategy;
+import de.cuioss.http.client.adapter.RetryConfig;
 import org.eclipse.microprofile.config.Config;
 
 import java.time.Duration;
 
 /**
- * Resolver for creating RetryStrategy instances from Quarkus configuration.
+ * Resolver for creating RetryConfig instances from Quarkus configuration.
  * <p>
- * This resolver creates {@link RetryStrategy} instances based on Quarkus configuration properties,
+ * This resolver creates {@link RetryConfig} instances based on Quarkus configuration properties,
  * providing configurable retry behavior for HTTP operations in JWT validation.
  * </p>
  * <p>
@@ -52,36 +51,39 @@ public class RetryStrategyConfigResolver {
     }
 
     /**
-     * Resolves a RetryStrategy instance from configuration properties.
+     * Resolves a RetryConfig instance from configuration properties.
      * <p>
-     * Creates an exponential backoff retry strategy with parameters configured
+     * Creates a retry configuration with exponential backoff parameters configured
      * through Quarkus properties. If retry is disabled globally, returns a
-     * no-op strategy that performs no retries.
+     * configuration with maxAttempts=0 that performs no retries.
      * </p>
      *
-     * @return configured RetryStrategy instance
+     * @return configured RetryConfig instance
      */
-   
-    public RetryStrategy resolveRetryStrategy() {
+
+    public RetryConfig resolveRetryConfig() {
         // Check if retry is disabled globally
         boolean retryEnabled = config.getOptionalValue(JwtPropertyKeys.RETRY.ENABLED, Boolean.class)
                 .orElse(true);
 
         if (!retryEnabled) {
-            return RetryStrategy.none();
+            // maxAttempts=1 means "try once, no retries" (effectively disabled)
+            return RetryConfig.builder()
+                    .maxAttempts(1)
+                    .build();
         }
 
-        // Build exponential backoff strategy from properties
-        return ExponentialBackoffRetryStrategy.builder()
+        // Build exponential backoff configuration from properties
+        return RetryConfig.builder()
                 .maxAttempts(config.getOptionalValue(JwtPropertyKeys.RETRY.MAX_ATTEMPTS, Integer.class)
                         .orElse(5))
                 .initialDelay(Duration.ofMillis(config.getOptionalValue(JwtPropertyKeys.RETRY.INITIAL_DELAY_MS, Long.class)
                         .orElse(1000L)))
                 .maxDelay(Duration.ofMillis(config.getOptionalValue(JwtPropertyKeys.RETRY.MAX_DELAY_MS, Long.class)
                         .orElse(30000L)))
-                .backoffMultiplier(config.getOptionalValue(JwtPropertyKeys.RETRY.BACKOFF_MULTIPLIER, Double.class)
+                .multiplier(config.getOptionalValue(JwtPropertyKeys.RETRY.BACKOFF_MULTIPLIER, Double.class)
                         .orElse(2.0))
-                .jitterFactor(config.getOptionalValue(JwtPropertyKeys.RETRY.JITTER_FACTOR, Double.class)
+                .jitter(config.getOptionalValue(JwtPropertyKeys.RETRY.JITTER_FACTOR, Double.class)
                         .orElse(0.1))
                 .build();
     }

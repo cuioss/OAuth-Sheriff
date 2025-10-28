@@ -259,6 +259,17 @@ This specification has been implemented in the following classes:
 
 The `JwksLoader` interface handles the retrieval, caching, and rotation of cryptographic keys used for token validation. It also provides issuer identification capabilities for well-known discovery scenarios. The `JWKSKeyLoader` class is used by the TokenSignatureValidator to validate token signatures. All implementations integrate with the SecurityEventCounter to track security events related to key management.
 
+==== Async-First Internal Architecture
+
+The JwksLoader implementations use an async-first architecture internally, powered by the CUI-HTTP library's HttpAdapter composition pattern:
+
+* **HttpAdapter Composition**: `HttpJwksLoader` uses `ETagAwareHttpAdapter` for bandwidth-efficient caching combined with `ResilientHttpAdapter` for resilient retry behavior
+* **CompletableFuture-Based**: The `initJWKSLoader()` method returns `CompletableFuture<LoaderStatus>` for asynchronous initialization
+* **Thread-Safe**: Lock-free implementation using `AtomicReference` for status tracking and content management
+* **Background Refresh**: Automatic background refresh of JWKS content with configurable intervals
+
+**Important**: While the internal implementation is async-first, the public-facing TokenValidator API remains synchronous. The async operations are resolved internally using `.join()` to maintain backward compatibility.
+
 ==== Core Methods
 
 The JwksLoader interface provides the following core methods:
@@ -312,6 +323,61 @@ HttpJwksLoaderConfig config = HttpJwksLoaderConfig.builder()
 
 The grace period ensures tokens signed with recently rotated keys remain valid during the transition, preventing service disruptions for in-flight requests.
 
+==== ETag Caching Behavior
+
+The `HttpJwksLoader` implements efficient ETag-based caching to minimize bandwidth usage:
+
+* **ETag Support**: Automatically includes `If-None-Match` headers on subsequent requests
+* **304 Not Modified**: Server returns 304 when content hasn't changed, avoiding data transfer
+* **Cache Key Strategy**: Uses URI-only cache keys (via `CacheKeyHeaderFilter.NONE`) since JWKS endpoints are public OAuth endpoints
+* **Thread-Safe Cache**: Lock-free cache operations using atomic references
+* **Background Refresh Integration**: Background refresh tasks correctly handle 304 responses by skipping key updates
+
+Example behavior:
+[source]
+----
+First request:  → 200 OK with full JWKS content + ETag: "abc123"
+Second request: → 304 Not Modified (cached content reused)
+Third request:  → 304 Not Modified (cached content reused)
+After key rotation: → 200 OK with new JWKS content + ETag: "def456"
+----
+
+This implementation significantly reduces network traffic and server load while ensuring keys are always up-to-date.
+
+==== HttpAdapter Composition Pattern
+
+The internal architecture of `HttpJwksLoader` and `HttpWellKnownResolver` follows a clean composition pattern using CUI-HTTP library adapters:
+
+**Base Layer - ETag Caching:**
+[source,java]
+----
+HttpAdapter<Jwks> base = ETagAwareHttpAdapter.<Jwks>builder()
+    .httpHandler(httpHandler)
+    .responseConverter(converter)
+    .cacheKeyHeaderFilter(CacheKeyHeaderFilter.NONE)  // URI-only for public endpoints
+    .build();
+----
+
+**Decorator Layer - Resilient Retry:**
+[source,java]
+----
+HttpAdapter<Jwks> adapter = ResilientHttpAdapter.wrap(base, retryConfig);
+----
+
+**Benefits:**
+* Separation of concerns (caching vs. retry logic)
+* Composable and testable architecture
+* ETag caching can be independently configured
+* Retry behavior can be customized via `RetryConfig`
+
+**Backward Compatibility:**
+Public API methods remain synchronous by calling `.join()` on the `CompletableFuture` returned by `adapter.get()`:
+[source,java]
+----
+// Internal async operation, public sync API
+HttpResult<Jwks> result = adapter.get().join();
+----
+
 ==== JwksLoaderFactory
 
 The JwksLoaderFactory provides methods to create different types of JwksLoader implementations:
@@ -328,6 +394,41 @@ For implementation details, see the JavaDoc of the following classes:
 * xref:../../oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/jwks/http/HttpJwksLoader.java[HttpJwksLoader]
 * xref:../../oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/jwks/key/JWKSKeyLoader.java[JWKSKeyLoader]
 * xref:../../oauth-sheriff-core/src/main/java/de/cuioss/sheriff/oauth/core/jwks/JwksLoaderFactory.java[JwksLoaderFactory]
+
+==== LoadingStatusProvider and LoaderStatus
+
+OAuth-Sheriff provides health status infrastructure for loader components through the `LoadingStatusProvider` interface and `LoaderStatus` enum.
+
+**LoadingStatusProvider Interface:**
+
+Interface for components providing health status information in OAuth/JWT validation.
+
+[source,java]
+----
+package de.cuioss.sheriff.oauth.core.util;
+
+public interface LoadingStatusProvider {
+    LoaderStatus getLoaderStatus();
+    default boolean isLoaderStatusOK() { ... }
+}
+----
+
+**Implementations:**
+
+* `JwksLoader` - JWKS key loading status
+* `HttpWellKnownResolver` - Well-known configuration status
+* `IssuerConfig` - Aggregated issuer configuration status
+
+**LoaderStatus Enum:**
+
+Status values for loader operations:
+
+* `UNDEFINED` - Initial state, not yet loaded
+* `LOADING` - Load operation in progress
+* `OK` - Successfully loaded and operational
+* `ERROR` - Load failed with non-recoverable error
+
+**Note:** These types provide health status infrastructure for OAuth/JWT validation components. All implementations must be non-blocking and avoid I/O operations in status checks.
 
 The following tests verify the implementation:
 

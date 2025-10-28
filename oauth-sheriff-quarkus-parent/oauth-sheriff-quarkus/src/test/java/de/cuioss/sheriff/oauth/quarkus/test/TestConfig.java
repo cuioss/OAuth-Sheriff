@@ -106,6 +106,8 @@ public class TestConfig implements Config {
             return (T) Boolean.valueOf(value);
         } else if (targetType == Long.class || targetType == long.class) {
             return (T) Long.valueOf(value);
+        } else if (targetType == Double.class || targetType == double.class) {
+            return (T) Double.valueOf(value);
         }
         throw new IllegalArgumentException("Unsupported type: " + targetType);
     }

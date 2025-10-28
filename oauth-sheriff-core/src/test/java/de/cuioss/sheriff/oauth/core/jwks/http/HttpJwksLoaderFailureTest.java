@@ -75,13 +75,9 @@ class HttpJwksLoaderFailureTest {
             LogAsserts.assertLogMessagePresentContaining(TestLogLevel.ERROR,
                     JWTValidationLogMessages.ERROR.JWKS_LOAD_FAILED.resolveIdentifierString());
 
-            // Also verify the no-cache warning was logged
-            LogAsserts.assertLogMessagePresentContaining(TestLogLevel.WARN,
-                    JWTValidationLogMessages.WARN.JWKS_LOAD_FAILED_NO_CACHE.resolveIdentifierString());
-
-            // And the HTTP fetch failure
-            LogAsserts.assertLogMessagePresentContaining(TestLogLevel.WARN,
-                    HttpLogMessages.WARN.HTTP_FETCH_FAILED.resolveIdentifierString());
+            // After migration: ETagAwareHttpAdapter logs HTTP-200 (CONFIGURATION_ERROR_DURING_REQUEST) for connection errors
+            LogAsserts.assertLogMessagePresentContaining(TestLogLevel.ERROR,
+                    HttpLogMessages.ERROR.CONFIGURATION_ERROR_DURING_REQUEST.resolveIdentifierString());
         }
     }
 

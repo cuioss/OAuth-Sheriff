@@ -15,8 +15,6 @@
  */
 package de.cuioss.benchmarking.common.report;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import de.cuioss.benchmarking.common.model.BenchmarkData;
 import de.cuioss.benchmarking.common.util.JsonSerializationHelper;
 import org.junit.jupiter.api.Test;
@@ -33,8 +31,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ReportDataGeneratorTest {
 
-    private static final Gson GSON = new Gson();
-
     @Test
     void chartDataGenerationWithRealIntegrationBenchmarks() throws Exception {
         // TEST: Reproduce the issue where latency and percentiles are missing from chart data
@@ -45,7 +41,6 @@ class ReportDataGeneratorTest {
         assertTrue(Files.exists(realDataPath), "Real benchmark data file must exist: " + realDataPath);
 
         String jsonContent = Files.readString(realDataPath);
-        JsonObject realData = GSON.fromJson(jsonContent, JsonObject.class);
 
         // Deserialize to BenchmarkData model
         BenchmarkData benchmarkData = JsonSerializationHelper.fromJson(jsonContent, BenchmarkData.class);
@@ -112,6 +107,6 @@ class ReportDataGeneratorTest {
 
         List<Double> p50Values = datasets.get("50.0th");
         assertNotNull(p50Values, "P50 values should exist");
-        assertTrue(p50Values.size() > 0, "Should have at least one percentile value");
+        assertFalse(p50Values.isEmpty(), "Should have at least one percentile value");
     }
 }
