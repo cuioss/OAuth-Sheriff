@@ -15,10 +15,10 @@
  */
 package de.cuioss.sheriff.oauth.quarkus.health;
 
-import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
 import de.cuioss.sheriff.oauth.core.jwks.JwksLoader;
 import de.cuioss.sheriff.oauth.core.jwks.JwksType;
+import de.cuioss.sheriff.oauth.core.util.LoaderStatus;
 import de.cuioss.sheriff.oauth.quarkus.config.JwtPropertyKeys;
 import de.cuioss.tools.logging.CuiLogger;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -61,7 +61,7 @@ public class JwksEndpointHealthCheck implements HealthCheck {
 
     @Inject
     public JwksEndpointHealthCheck(List<IssuerConfig> issuerConfigs,
-            @ConfigProperty(name = JwtPropertyKeys.HEALTH.JWKS.CACHE_SECONDS, defaultValue = DEFAULT_CACHE_SECONDS) int cacheSeconds) {
+                                   @ConfigProperty(name = JwtPropertyKeys.HEALTH.JWKS.CACHE_SECONDS, defaultValue = DEFAULT_CACHE_SECONDS) int cacheSeconds) {
         this.issuerConfigs = issuerConfigs;
         this.cacheTimeoutMillis = TimeUnit.SECONDS.toMillis(cacheSeconds);
     }
@@ -86,14 +86,17 @@ public class JwksEndpointHealthCheck implements HealthCheck {
      */
     private HealthCheckResponse performHealthCheck() {
         if (issuerConfigs.isEmpty()) {
-            return createErrorResponse(ERROR_NO_ISSUER_CONFIGS);
+            return HealthCheckResponse.named(HEALTHCHECK_NAME)
+                .down()
+                .withData(ERROR, ERROR_NO_ISSUER_CONFIGS)
+                .build();
         }
 
         var responseBuilder = HealthCheckResponse.named(HEALTHCHECK_NAME).up();
 
         var results = issuerConfigs.stream()
-                .map(issuerConfig -> EndpointResult.fromIssuerConfig(issuerConfig.getIssuerIdentifier(), issuerConfig))
-                .toList();
+            .map(issuerConfig -> EndpointResult.fromIssuerConfig(issuerConfig.getIssuerIdentifier(), issuerConfig))
+            .toList();
 
         // Add all endpoint data to response
         for (int i = 0; i < results.size(); i++) {
@@ -113,23 +116,10 @@ public class JwksEndpointHealthCheck implements HealthCheck {
 
         // Add enhanced readiness reporting
         responseBuilder
-                .withData("readiness", allReady ? "READY" : "NOT_READY")
-                .withData("loading", anyLoading ? "IN_PROGRESS" : "COMPLETE");
+            .withData("readiness", allReady ? "READY" : "NOT_READY")
+            .withData("loading", anyLoading ? "IN_PROGRESS" : "COMPLETE");
 
         return responseBuilder.build();
-    }
-
-    /**
-     * Creates an error response with the given error message.
-     *
-     * @param errorMessage the error message
-     * @return the health check response
-     */
-    private HealthCheckResponse createErrorResponse(String errorMessage) {
-        return HealthCheckResponse.named(HEALTHCHECK_NAME)
-                .down()
-                .withData(ERROR, errorMessage)
-                .build();
     }
 
     private record CachedResponse(HealthCheckResponse response, long expiryTime) {
@@ -143,13 +133,20 @@ public class JwksEndpointHealthCheck implements HealthCheck {
         /**
          * Creates an EndpointResult from an issuer configuration.
          *
-         * @param issuer the issuer name
+         * @param issuer       the issuer name
          * @param issuerConfig the issuer configuration
          * @return the endpoint result
          */
         static EndpointResult fromIssuerConfig(String issuer, IssuerConfig issuerConfig) {
             try {
                 JwksLoader jwksLoader = issuerConfig.getJwksLoader();
+
+                // Handle null loader (issuer disabled or not initialized)
+                if (jwksLoader == null) {
+                    LoaderStatus status = LoaderStatus.UNDEFINED;
+                    LOGGER.debug("JWKS loader status for issuer %s: %s (loader not initialized)", issuer, status);
+                    return new EndpointResult(issuer, JwksType.NONE.toString(), status);
+                }
 
                 LoaderStatus status = jwksLoader.getLoaderStatus();
                 LOGGER.debug("JWKS loader status for issuer %s: %s", issuer, status);
@@ -165,7 +162,7 @@ public class JwksEndpointHealthCheck implements HealthCheck {
          * Adds this endpoint's data to the health check response builder.
          *
          * @param responseBuilder the response builder
-         * @param prefix the prefix for the data keys
+         * @param prefix          the prefix for the data keys
          */
         void addToResponse(HealthCheckResponseBuilder responseBuilder, String prefix) {
             boolean up = status == LoaderStatus.OK;
