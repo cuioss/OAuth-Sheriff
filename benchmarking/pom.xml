@@ -28,7 +28,7 @@
         <!-- External dependency versions -->
         <version.gson>2.13.2</version.gson>
         <version.hdrhistogram>2.2.2</version.hdrhistogram>
-        <version.commons-io>2.20.0</version.commons-io>
+        <version.commons-io>2.21.0</version.commons-io>
         <!-- Skip benchmarks by default -->
         <skip.benchmark>true</skip.benchmark>
 
