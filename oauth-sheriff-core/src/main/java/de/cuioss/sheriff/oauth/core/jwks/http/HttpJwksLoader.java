@@ -61,7 +61,7 @@ import static de.cuioss.sheriff.oauth.core.JWTValidationLogMessages.WARN;
  *   <li>URI-only cache keys for public OAuth endpoints (no header pollution)</li>
  * </ul>
  * <p>
- * Implements Requirement <a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-4.5">OAUTH-SHERIFF-4.5: Key Rotation Grace Period</a>
+ * Implements Requirement <a href="../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-4.5">OAUTH-SHERIFF-4.5: Key Rotation Grace Period</a>
  *
  * @author Oliver Wolff
  * @see HttpJwksLoaderConfig
