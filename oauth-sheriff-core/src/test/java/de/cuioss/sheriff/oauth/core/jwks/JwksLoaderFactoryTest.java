@@ -39,9 +39,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li>CUI-JWT-4.1: JWKS Loading from different sources (HTTP, file, in-memory)</li>
- *   <li>CUI-JWT-4.4: Graceful handling of JWKS loading failures</li>
- *   <li>CUI-JWT-7.2: Security event tracking for JWKS operations</li>
+ *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-4.1">OAUTH-SHERIFF-4.1: JWKS Endpoint Support</a> (HTTP loading)</li>
+ *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-4.4">OAUTH-SHERIFF-4.4: Local Key Support</a> (file and in-memory loading)</li>
+ *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a> (JWKS operation tracking)</li>
  * </ul>
  *
  * @author Oliver Wolff

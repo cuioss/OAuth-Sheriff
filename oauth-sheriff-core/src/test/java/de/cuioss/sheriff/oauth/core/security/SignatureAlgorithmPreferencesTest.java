@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for {@link SignatureAlgorithmPreferences}.
  * <p>
  * This test class verifies the functionality of the SignatureAlgorithmPreferences class,
- * which implements the requirement CUI-JWT-8.5: Cryptographic Agility as specified
+ * which implements the requirement <a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-8.5">OAUTH-SHERIFF-8.5: Cryptographic Agility</a> as specified
  * in the security specification.
  * <p>
  * See: doc/specification/security-specifications.adoc
