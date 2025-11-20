@@ -45,9 +45,9 @@
  * <p>
  * Implements requirements:
  * <ul>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-1">OAUTH-SHERIFF-1: Token Parsing and Validation</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-8.4">OAUTH-SHERIFF-8.4: Claims Validation</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1">OAUTH-SHERIFF-1: Token Parsing and Validation</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.4">OAUTH-SHERIFF-8.4: Claims Validation</a></li>
  * </ul>
  * <p>
  * For more detailed specifications, see the

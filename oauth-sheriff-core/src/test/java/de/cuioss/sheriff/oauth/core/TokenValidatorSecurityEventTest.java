@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a> (security event tracking, monitoring, and incident detection)</li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a> (security event tracking, monitoring, and incident detection)</li>
  * </ul>
  *
  * @author Oliver Wolff

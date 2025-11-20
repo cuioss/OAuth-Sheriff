@@ -41,18 +41,18 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.1">OAUTH-SHERIFF-1.1: Token Structure</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.2">OAUTH-SHERIFF-1.2: Token Types</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-3.1">OAUTH-SHERIFF-3.1: Issuer Configuration</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-3.2">OAUTH-SHERIFF-3.2: Issuer Selection</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-3.3">OAUTH-SHERIFF-3.3: Issuer Validation</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-5.1">OAUTH-SHERIFF-5.1: Token Parsing Methods</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-6.1">OAUTH-SHERIFF-6.1: Configuration Flexibility</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.1">OAUTH-SHERIFF-7.1: Log Levels</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.2">OAUTH-SHERIFF-7.2: Log Content</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-8.1">OAUTH-SHERIFF-8.1: Token Size Limits</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-8.2">OAUTH-SHERIFF-8.2: Safe Parsing</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.1">OAUTH-SHERIFF-1.1: Token Structure</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.2">OAUTH-SHERIFF-1.2: Token Types</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-3.1">OAUTH-SHERIFF-3.1: Issuer Configuration</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-3.2">OAUTH-SHERIFF-3.2: Issuer Selection</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-3.3">OAUTH-SHERIFF-3.3: Issuer Validation</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-5.1">OAUTH-SHERIFF-5.1: Token Parsing Methods</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-6.1">OAUTH-SHERIFF-6.1: Configuration Flexibility</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-7.1">OAUTH-SHERIFF-7.1: Log Levels</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-7.2">OAUTH-SHERIFF-7.2: Log Content</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.1">OAUTH-SHERIFF-8.1: Token Size Limits</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.2">OAUTH-SHERIFF-8.2: Safe Parsing</a></li>
  * </ul>
  *
  * @author Oliver Wolff

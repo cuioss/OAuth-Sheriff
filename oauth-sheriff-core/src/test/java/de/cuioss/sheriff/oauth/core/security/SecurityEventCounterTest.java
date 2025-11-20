@@ -33,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a> (security event monitoring and tracking)</li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-10.1">OAUTH-SHERIFF-10.1: Thread Safety</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a> (security event monitoring and tracking)</li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-10.1">OAUTH-SHERIFF-10.1: Thread Safety</a></li>
  * </ul>
  * <p>
  * This test class ensures that security events are properly counted, can be reset,

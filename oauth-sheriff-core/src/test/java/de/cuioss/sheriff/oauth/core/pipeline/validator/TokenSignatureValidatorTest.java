@@ -52,9 +52,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.1">OAUTH-SHERIFF-1.1: Token Structure</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a> (includes algorithm selection and confusion protection)</li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/tree/main/doc/Requirements.adoc#OAUTH-SHERIFF-4">OAUTH-SHERIFF-4: Key Management</a> (key material handling)</li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.1">OAUTH-SHERIFF-1.1: Token Structure</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a> (includes algorithm selection and confusion protection)</li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-4">OAUTH-SHERIFF-4: Key Management</a> (key material handling)</li>
  * </ul>
  *
  * @author Oliver Wolff

@@ -45,13 +45,13 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-2.1">OAUTH-SHERIFF-2.1: Base Token Functionality</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-3.1">OAUTH-SHERIFF-3.1: Issuer Configuration</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-3.3">OAUTH-SHERIFF-3.3: Issuer Validation</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.1">OAUTH-SHERIFF-7.1: Log Levels</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a></li>
- *   <li><a href="https://github.com/cuioss/OAuth-Sheriff/blob/main/doc/Requirements.adoc#OAUTH-SHERIFF-8.4">OAUTH-SHERIFF-8.4: Claims Validation</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-2.1">OAUTH-SHERIFF-2.1: Base Token Functionality</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-3.1">OAUTH-SHERIFF-3.1: Issuer Configuration</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-3.3">OAUTH-SHERIFF-3.3: Issuer Validation</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-7.1">OAUTH-SHERIFF-7.1: Log Levels</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-7.3">OAUTH-SHERIFF-7.3: Security Events</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.4">OAUTH-SHERIFF-8.4: Claims Validation</a></li>
  * </ul>
  * 
  * @author Oliver Wolff
