@@ -49,10 +49,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li>CUI-JWT-3.1: OAuth2 JWT Best Practices</li>
- *   <li>CUI-JWT-3.2: Audience Validation</li>
- *   <li>CUI-JWT-3.3: Issuer Validation</li>
- *   <li>CUI-JWT-6.1: Token Size Validation</li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a> (OAuth2 JWT Best Practices)</li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.4">OAUTH-SHERIFF-8.4: Claims Validation</a> (includes audience)</li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-3.3">OAUTH-SHERIFF-3.3: Issuer Validation</a></li>
+ *   <li><a href="../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.1">OAUTH-SHERIFF-8.1: Token Size Limits</a></li>
  * </ul>
  *
  * @author Oliver Wolff

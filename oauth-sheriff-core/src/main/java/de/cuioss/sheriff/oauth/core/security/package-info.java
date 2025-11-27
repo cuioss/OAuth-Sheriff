@@ -40,11 +40,11 @@
  * <p>
  * This package implements the following requirements:
  * <ul>
- *   <li>CUI-JWT-8.1: Default Security Considerations</li>
- *   <li>CUI-JWT-8.2: Strict Input Validation</li>
- *   <li>CUI-JWT-8.3: Secure Communication</li>
- *   <li>CUI-JWT-8.4: ClaimNames Validation</li>
- *   <li>CUI-JWT-8.5: Cryptographic Agility</li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.1">OAUTH-SHERIFF-8.1: Token Size Limits</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.2">OAUTH-SHERIFF-8.2: Safe Parsing</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.3">OAUTH-SHERIFF-8.3: Secure Communication</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.4">OAUTH-SHERIFF-8.4: Claims Validation</a></li>
+ *   <li><a href="../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-8.5">OAUTH-SHERIFF-8.5: Cryptographic Agility</a></li>
  * </ul>
  * <p>
  * For more details on the security aspects, see the

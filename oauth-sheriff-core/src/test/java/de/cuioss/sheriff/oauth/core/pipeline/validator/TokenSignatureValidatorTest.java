@@ -52,11 +52,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * Verifies requirements:
  * <ul>
- *   <li>CUI-JWT-3.1: Valid JWT Token Structure</li>
- *   <li>CUI-JWT-3.2: Algorithm Selection and Validation</li>
- *   <li>CUI-JWT-6.1: Signature Validation</li>
- *   <li>CUI-JWT-6.2: Algorithm Confusion Protection</li>
- *   <li>CUI-JWT-6.4: Key Material Handling</li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.1">OAUTH-SHERIFF-1.1: Token Structure</a></li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-1.3">OAUTH-SHERIFF-1.3: Signature Validation</a> (includes algorithm selection and confusion protection)</li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-4">OAUTH-SHERIFF-4: Key Management</a> (key material handling)</li>
  * </ul>
  *
  * @author Oliver Wolff

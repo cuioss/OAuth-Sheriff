@@ -43,8 +43,7 @@
  * <p>
  * This package implements parts of the following requirements:
  * <ul>
- *   <li>CUI-JWT-4.3: Claim Extraction and Validation</li>
- *   <li>CUI-JWT-4.4: Standard Claim Support</li>
+ *   <li><a href="../../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-2.1">OAUTH-SHERIFF-2.1: Base Token Functionality</a> (claim extraction and validation)</li>
  * </ul>
  * <p>
  * For more details on claim handling, see the

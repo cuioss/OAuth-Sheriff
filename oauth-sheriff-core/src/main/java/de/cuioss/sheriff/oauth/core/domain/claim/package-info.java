@@ -41,9 +41,8 @@
  * <p>
  * This package implements parts of the following requirements:
  * <ul>
- *   <li>CUI-JWT-4.3: Claim Extraction and Validation</li>
- *   <li>CUI-JWT-4.4: Standard Claim Support</li>
- *   <li>CUI-JWT-5.1: OpenID Connect Support</li>
+ *   <li><a href="../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-2.1">OAUTH-SHERIFF-2.1: Base Token Functionality</a> (claim access and extraction)</li>
+ *   <li><a href="../../../../../../../../../../../doc/Requirements.adoc#OAUTH-SHERIFF-2.3">OAUTH-SHERIFF-2.3: ID Token Functionality</a> (OpenID Connect support)</li>
  * </ul>
  * <p>
  * For more details on claim handling, see the

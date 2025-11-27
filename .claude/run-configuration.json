@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "commands": {
+    "builder-build-and-fix": {
+      "maven": {
+        "last_execution": {
+          "date": "2025-11-27",
+          "status": "SUCCESS",
+          "duration_ms": 531535
+        }
+      }
+    },
+    "verify-integration-tests": {
+      "last_execution": {
+        "date": "2025-11-27",
+        "status": "SUCCESS",
+        "duration_ms": 231584
+      },
+      "acceptable_warnings": [
+        "WARNING [de.cui.she.oau.cor.IssuerConfig] JWTValidation-134: IssuerConfig for issuer",
+        "WARNING [de.cui.she.oau.cor.pip.val.TokenClaimValidator] JWTValidation-112: Missing recommended element: expectedAudience",
+        "WARN [org.keycloak.storage.datastore.DefaultExportImportManager] Referenced client scope",
+        "WARN [org.keycloak.models.utils.RepresentationToModel] Referenced client scope"
+      ]
+    },
+    "verify-micro-benchmark": {
+      "last_execution": {
+        "date": "2025-11-27",
+        "status": "SUCCESS",
+        "duration_ms": 261370
+      },
+      "acceptable_warnings": []
+    },
+    "verify-integration-benchmark": {
+      "last_execution": {
+        "date": "2025-11-27",
+        "status": "SUCCESS",
+        "duration_ms": 353893
+      },
+      "acceptable_warnings": [
+        "WARNING [de.cui.she.oau.cor.IssuerConfig] JWTValidation-134: IssuerConfig for issuer",
+        "WARN [org.keycloak.storage.datastore.DefaultExportImportManager] Referenced client scope",
+        "WARN [org.keycloak.models.utils.RepresentationToModel] Referenced client scope"
+      ]
+    },
+    "docs-verify-links": {
+      "skipped_files": [
+        "target/**/*.adoc",
+        "node_modules/**/*.adoc",
+        ".git/**/*.adoc"
+      ],
+      "acceptable_warnings": [],
+      "last_execution": {
+        "date": "2025-10-17",
+        "status": "SUCCESS"
+      }
+    },
+    "docs-technical-adoc-review": {
+      "skipped_directories": [
+        "target/",
+        "node_modules/",
+        ".git/"
+      ],
+      "acceptable_warnings": [],
+      "last_execution": {
+        "date": "2025-10-21",
+        "status": "SUCCESS"
+      }
+    },
+    "handle-pull-request": {
+      "last_execution": {
+        "date": "2025-10-14",
+        "status": "SUCCESS"
+      },
+      "ci_sonar_duration_ms": 300000
+    }
+  },
+  "maven": {
+    "acceptable_warnings": {
+      "transitive_dependency": [],
+      "plugin_compatibility": [
+        "WARN [io.mic.cor.ins.MeterRegistry]",
+        "Einige Eingabedateien verwenden nicht geprüfte oder unsichere Vorgänge",
+        "Wiederholen Sie die Kompilierung mit -Xlint:unchecked"
+      ],
+      "platform_specific": [
+        "WARNING: A terminally deprecated method in sun.misc.Unsafe has been called",
+        "WARNING: sun.misc.Unsafe::arrayBaseOffset",
+        "WARNING: A restricted method in java.lang.System has been called",
+        "WARNING: java.lang.System::loadLibrary",
+        "[WARNING] [io.smallrye.common.process] SRCOM05000: Command docker (pid",
+        "Warning: Option .DynamicProxyConfigurationResources. is deprecated"
+      ]
+    }
+  }
+}
