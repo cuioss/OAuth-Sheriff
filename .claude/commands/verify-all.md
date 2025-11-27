@@ -6,7 +6,7 @@ Execute comprehensive verification of the entire project by running all verifica
 
 This command executes the following verification commands in **strict serial order**:
 
-1. **Maven Pre-commit Build** (inline - runs `./mvnw -Ppre-commit clean install`)
+1. `/builder-build-and-fix system=maven`
 2. `/verify-integration-tests`
 3. `/verify-micro-benchmark`
 4. `/verify-integration-benchmark`
