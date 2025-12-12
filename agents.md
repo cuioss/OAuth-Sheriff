@@ -232,11 +232,12 @@ All commands read execution duration from `doc/commands.md` and update it if cha
 
 ## General Process Rules
 
-1. **If in doubt, ask the user** - Never make assumptions
-2. **Always research topics** - Use available tools (WebSearch, WebFetch, etc.) to find recent best practices
-3. **Never guess or be creative** - If you cannot find best practices, ask the user
-4. **Do not proliferate documents** - Always use context-relevant documents, never create without user approval
-5. **Never add dependencies without approval** - Always ask before adding any dependency
+1. **Use `.plan/temp/` for ALL temporary files** - Covered by `Write(.plan/**)` permission (avoids permission prompts)
+2. **If in doubt, ask the user** - Never make assumptions
+3. **Always research topics** - Use available tools (WebSearch, WebFetch, etc.) to find recent best practices
+4. **Never guess or be creative** - If you cannot find best practices, ask the user
+5. **Do not proliferate documents** - Always use context-relevant documents, never create without user approval
+6. **Never add dependencies without approval** - Always ask before adding any dependency
 
 ## Important Files
 

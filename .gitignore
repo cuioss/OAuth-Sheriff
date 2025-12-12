@@ -19,3 +19,7 @@
 
 # Claude Code configuration
 .claude/settings.local.json
+
+# Planning system (managed by /plan-marshall)
+.plan/*
+!.plan/marshal.json

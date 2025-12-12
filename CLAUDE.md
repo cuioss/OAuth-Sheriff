@@ -12,6 +12,8 @@ This file contains:
 
 Please refer to `agents.md` for complete guidance when working on this OAuth Sheriff project.
 
+- Use `.plan/temp/` for ALL temporary files (covered by `Write(.plan/**)` permission - avoids permission prompts)
+
 ## Custom Commands
 
 ### verifyCuiLoggingGuidelines
