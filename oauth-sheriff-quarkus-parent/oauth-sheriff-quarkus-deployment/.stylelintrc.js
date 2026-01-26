@@ -12,8 +12,7 @@ export default {
   ],
   
   plugins: [
-    'stylelint-order',
-    'stylelint-declaration-strict-value'
+    'stylelint-order'
   ],
   
   // Custom syntax for CSS-in-JS
@@ -86,20 +85,6 @@ export default {
       'animation'
     ],
     
-    // CSS Custom Properties enforcement for design tokens
-    'scale-unlimited/declaration-strict-value': [
-      ['/color$/', 'fill', 'stroke', 'background-color'],
-      {
-        'ignoreValues': [
-          'currentColor',
-          'transparent',
-          'inherit',
-          'initial',
-          'unset'
-        ]
-      }
-    ],
-    
     // CSS Custom Properties patterns
     'custom-property-pattern': '^[a-z][a-z0-9]*(-[a-z0-9]+)*$',
     'custom-property-empty-line-before': 'never',
@@ -120,9 +105,16 @@ export default {
       'height': ['rem', 'em', 'px', '%', 'vw', 'vh'],
     },
     
-    // Color and theming
+    // Color and theming - enforce CSS custom properties for color values
     'color-named': 'never',
     'color-no-hex': null,
+    'declaration-property-value-allowed-list': {
+      'color': ['/^var\\(--/', 'currentColor', 'inherit', 'initial', 'unset', 'transparent'],
+      'background-color': ['/^var\\(--/', 'currentColor', 'inherit', 'initial', 'unset', 'transparent'],
+      'border-color': ['/^var\\(--/', 'currentColor', 'inherit', 'initial', 'unset', 'transparent'],
+      'fill': ['/^var\\(--/', 'currentColor', 'inherit', 'initial', 'unset', 'transparent'],
+      'stroke': ['/^var\\(--/', 'currentColor', 'inherit', 'initial', 'unset', 'transparent'],
+    },
     
     // CSS Grid and Flexbox
     'property-no-vendor-prefix': [
