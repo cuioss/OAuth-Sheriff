@@ -23,3 +23,12 @@
 # Planning system (managed by /plan-marshall)
 .plan/*
 !.plan/marshal.json
+
+# Planning system (managed by /marshall-steward)
+!.plan/project-structure.toon
+
+# Planning system (managed by /marshall-steward)
+!.plan/project-structure.json
+
+# Planning system (managed by /marshall-steward)
+!.plan/project-architecture/
