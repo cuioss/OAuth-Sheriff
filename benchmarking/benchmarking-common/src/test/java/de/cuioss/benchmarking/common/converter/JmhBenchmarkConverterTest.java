@@ -106,8 +106,8 @@ class JmhBenchmarkConverterTest {
         assertEquals("ops/s", healthCheck.getScoreUnit());
 
         // Score should be converted: 9.95 ops/ms = 9,952 ops/s
-        assertEquals("10,0K ops/s", healthCheck.getScore());
-        assertEquals("10,0K ops/s", healthCheck.getThroughput());
+        assertEquals("10.0K ops/s", healthCheck.getScore());
+        assertEquals("10.0K ops/s", healthCheck.getThroughput());
 
         // Test JWT validation benchmark
         BenchmarkData.Benchmark jwtValidation = result.getBenchmarks().get(1);
@@ -120,12 +120,12 @@ class JmhBenchmarkConverterTest {
         assertEquals("ops/s", jwtValidation.getScoreUnit());
 
         // Score should be converted: 8.12 ops/ms = 8,117 ops/s
-        assertEquals("8,1K ops/s", jwtValidation.getScore());
-        assertEquals("8,1K ops/s", jwtValidation.getThroughput());
+        assertEquals("8.1K ops/s", jwtValidation.getScore());
+        assertEquals("8.1K ops/s", jwtValidation.getThroughput());
 
         // Test overview
         BenchmarkData.Overview overview = result.getOverview();
-        assertEquals("10,0K ops/s", overview.getThroughput());
+        assertEquals("10.0K ops/s", overview.getThroughput());
         assertEquals("healthCheckThroughput", overview.getThroughputBenchmarkName());
     }
 
@@ -172,8 +172,8 @@ class JmhBenchmarkConverterTest {
 
         // Latency units should remain unchanged
         assertEquals("ms/op", latencyBenchmark.getScoreUnit());
-        assertEquals("2,1 ms/op", latencyBenchmark.getScore());
-        assertEquals("2,1 ms/op", latencyBenchmark.getLatency());
+        assertEquals("2.1 ms/op", latencyBenchmark.getScore());
+        assertEquals("2.1 ms/op", latencyBenchmark.getLatency());
         assertNull(latencyBenchmark.getThroughput());
     }
 
@@ -207,7 +207,7 @@ class JmhBenchmarkConverterTest {
 
         BenchmarkData.Benchmark benchmark = result.getBenchmarks().getFirst();
         assertEquals("ops/s", benchmark.getScoreUnit());
-        assertEquals("1,0K ops/s", benchmark.getScore());
+        assertEquals("1.0K ops/s", benchmark.getScore());
     }
 
     @Test

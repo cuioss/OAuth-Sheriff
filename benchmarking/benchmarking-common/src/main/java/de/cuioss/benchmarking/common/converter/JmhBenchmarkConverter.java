@@ -176,9 +176,9 @@ public class JmhBenchmarkConverter implements BenchmarkConverter {
 
     private String formatScore(double score, String unit) {
         if (score >= 1000) {
-            return String.format(Locale.GERMAN, "%.1fK %s", score / 1000, unit);
+            return String.format(Locale.US, "%.1fK %s", score / 1000, unit);
         }
-        return String.format(Locale.GERMAN, "%.1f %s", score, unit);
+        return String.format(Locale.US, "%.1f %s", score, unit);
     }
 
     private int calculatePerformanceScore(double throughput, double latency) {

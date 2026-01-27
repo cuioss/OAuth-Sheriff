@@ -265,16 +265,16 @@ public class WrkBenchmarkConverter implements BenchmarkConverter {
 
     private String formatThroughput(double reqPerSec) {
         if (reqPerSec >= 1000) {
-            return "%.1fK ops/s".formatted(reqPerSec / 1000);
+            return String.format(Locale.US, "%.1fK ops/s", reqPerSec / 1000);
         }
-        return "%.0f ops/s".formatted(reqPerSec);
+        return String.format(Locale.US, "%.0f ops/s", reqPerSec);
     }
 
     private String formatLatency(double ms) {
         if (ms < 1) {
-            return "%.0fμs".formatted(ms * 1000);
+            return String.format(Locale.US, "%.0fμs", ms * 1000);
         }
-        return "%.1fms".formatted(ms);
+        return String.format(Locale.US, "%.1fms", ms);
     }
 
     private int calculatePerformanceScore(double throughput, double latencyMs) {

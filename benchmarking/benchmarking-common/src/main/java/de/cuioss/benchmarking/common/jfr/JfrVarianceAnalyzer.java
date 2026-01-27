@@ -135,24 +135,24 @@ public class JfrVarianceAnalyzer {
                         LOGGER.info("  Total Operations: %s (Success: %s, Failed: %s)%n",
                                 metrics.totalOperations, metrics.successfulOperations, metrics.failedOperations);
                         LOGGER.info("  Latency (μs) - P50: %s, P95: %s, P99: %s, Max: %s%n",
-                                "%.2f".formatted(metrics.p50Latency / 1000.0),
-                                "%.2f".formatted(metrics.p95Latency / 1000.0),
-                                "%.2f".formatted(metrics.p99Latency / 1000.0),
-                                "%.2f".formatted(metrics.maxLatency / 1000.0));
+                                String.format(Locale.US, "%.2f", metrics.p50Latency / 1000.0),
+                                String.format(Locale.US, "%.2f", metrics.p95Latency / 1000.0),
+                                String.format(Locale.US, "%.2f", metrics.p99Latency / 1000.0),
+                                String.format(Locale.US, "%.2f", metrics.maxLatency / 1000.0));
                         LOGGER.info("  Variance: %s ns² (StdDev: %s μs)%n",
-                                "%.2e".formatted(metrics.variance),
-                                "%.2f".formatted(metrics.standardDeviation / 1000.0));
+                                String.format(Locale.US, "%.2e", metrics.variance),
+                                String.format(Locale.US, "%.2f", metrics.standardDeviation / 1000.0));
                         LOGGER.info("  Coefficient of Variation: %s%%%n",
-                                "%.2f".formatted(metrics.coefficientOfVariation));
+                                String.format(Locale.US, "%.2f", metrics.coefficientOfVariation));
                         LOGGER.info("  Max Concurrent Operations: %s%n", metrics.maxConcurrentOperations);
 
                         if (!metrics.statisticsSnapshots.isEmpty()) {
                             LOGGER.info("  Periodic Statistics:");
                             LOGGER.info("    Average CV over time: %s%%%n",
-                                    "%.2f".formatted(metrics.averageCV));
+                                    String.format(Locale.US, "%.2f", metrics.averageCV));
                             LOGGER.info("    CV Range: %s%% - %s%%%n",
-                                    "%.2f".formatted(metrics.minCV),
-                                    "%.2f".formatted(metrics.maxCV));
+                                    String.format(Locale.US, "%.2f", metrics.minCV),
+                                    String.format(Locale.US, "%.2f", metrics.maxCV));
                         }
 
                         LOGGER.info("");
