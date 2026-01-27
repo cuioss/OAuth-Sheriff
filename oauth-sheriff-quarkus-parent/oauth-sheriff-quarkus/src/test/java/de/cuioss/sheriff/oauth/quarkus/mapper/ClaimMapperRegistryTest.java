@@ -21,6 +21,7 @@ import de.cuioss.sheriff.oauth.core.domain.claim.mapper.ClaimMapper;
 import de.cuioss.test.juli.TestLogLevel;
 import de.cuioss.test.juli.junit5.EnableTestLogger;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.util.TypeLiteral;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -193,7 +194,7 @@ class ClaimMapperRegistryTest {
         }
 
         @Override
-        public <U extends DiscoverableClaimMapper> Instance<U> select(jakarta.enterprise.util.TypeLiteral<U> subtype, java.lang.annotation.Annotation... qualifiers) {
+        public <U extends DiscoverableClaimMapper> Instance<U> select(TypeLiteral<U> subtype, java.lang.annotation.Annotation... qualifiers) {
             throw new UnsupportedOperationException();
         }
 
