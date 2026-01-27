@@ -186,8 +186,6 @@ The 119x performance degradation from micro-benchmark (53µs) to integration (6.
 
 **Note:** Individual contribution of each component is unmeasured - requires profiling to quantify.
 
-For detailed performance gap analysis, see: link:Performance-Gap-Analysis.md[Performance Gap Analysis]
-
 === Performance Ceiling
 
 * **Health check capacity**: 77.1K ops/s at 100 connections (peak performance)
@@ -204,6 +202,85 @@ The 3.5x throughput difference (77K health vs 22K JWT) is primarily due to:
 - **Higher CPU usage**: JWT uses 13% more CPU (78% vs 69% at 50 conns)
 
 **What we know:** Both endpoints use the same HTTP/REST/Quarkus/Docker stack. The gap is caused by differences in endpoint implementation. **What we don't know:** Exact breakdown of where the 1.5ms difference (at 50 conns) comes from - requires profiling to measure.
+
+=== Endpoint Implementation Comparison
+
+Both endpoints use CDI injection and beans. CDI itself is NOT the differentiator.
+
+[cols="2,2,2,2", options="header"]
+|===
+|Factor
+|Health (`/q/health/live`)
+|JWT (`/jwt/validate`)
+|Notes
+
+|Request-scoped producers
+|None
+|Yes (`Instance<BearerTokenResult>`)
+|Observable from code
+
+|Producer invocation
+|None
+|`basicToken.get()` per request
+|Observable from code
+
+|Response complexity
+|Simple status object
+|Nested maps with collections
+|Observable from code
+
+|Business logic
+|Check if list is empty
+|Extract claims, build map, authorization checks
+|Observable from code
+
+|JWT validation
+|None
+|Core library validates in 53µs (micro-benchmark)
+|From JMH data
+|===
+
+=== Per-Thread and Per-CPU Efficiency (50 connections)
+
+[cols="2,2,2,2", options="header"]
+|===
+|Endpoint
+|Throughput
+|Threads (avg)
+|ops/s per thread
+
+|Health
+|66,900 ops/s
+|36
+|**1,858**
+
+|JWT
+|21,600 ops/s
+|67
+|**322**
+|===
+
+JWT endpoint has 5.8x worse per-thread efficiency, expected given its longer processing time (2.05ms P50 vs 0.573ms P50 for health).
+
+[cols="2,2,2,2", options="header"]
+|===
+|Endpoint
+|Throughput
+|CPU (peak)
+|ops/s per 1% CPU
+
+|Health
+|66,900 ops/s
+|~100%
+|**669**
+
+|JWT
+|21,600 ops/s
+|~100%
+|**216**
+|===
+
+JWT endpoint is 3.1x less CPU-efficient due to larger HTTP payload processing, complex JSON serialization, cryptographic validation, token claims extraction, and CDI request-scoped bean management.
 
 == Conclusion
 
