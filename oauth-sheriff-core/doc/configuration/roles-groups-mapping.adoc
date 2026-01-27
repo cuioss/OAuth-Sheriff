@@ -213,6 +213,8 @@ public class MyCustomClaimMapper implements DiscoverableClaimMapper {
 
 The mapper is automatically discovered by the `ClaimMapperRegistry` and applied globally to all configured issuers.
 
+NOTE: The `isEnabled()` method defaults to `true`. You only need to override it if you want to conditionally activate the mapper via configuration properties.
+
 === Built-in Keycloak Mappers
 
 The Quarkus extension provides built-in CDI mapper beans for Keycloak's default claim structures. These are controlled by global configuration properties:

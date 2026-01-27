@@ -203,7 +203,7 @@ This automatically maps:
 
 Benefits:
 
-- Global CDI-based registration via `DiscoverableClaimMapper` SPI
+- Global CDI-based registration via the `DiscoverableClaimMapper` interface (Service Provider Interface)
 - No Keycloak realm modification needed
 - Works with standard Keycloak token structure
 - Custom mappers can be added by implementing `DiscoverableClaimMapper` as CDI beans
