@@ -74,8 +74,8 @@ A systematic investigation was conducted to identify the optimal connection coun
 |Health Throughput
 |JWT P50/P90/P99 (ms)
 |JWT Throughput
-|CPU Peak
-|Threads
+|JWT CPU Peak
+|JWT Threads (peak)
 
 |50 (Default)
 |0.426 / 1.98 / 7.89
@@ -236,7 +236,7 @@ Key observations:
 
 **Throughput gap explanation:**
 
-The ~3.9x throughput difference (95K health vs 24K JWT at 100 conns) is fully explained by the ~4.5x per-request latency ratio. With a fixed number of connections, throughput is inversely proportional to per-request latency — if each JWT request takes 4.5x longer to process, throughput drops by approximately that factor. The slight difference between the throughput ratio (3.9x) and the latency ratio (4.5x) is accounted for by JWT's higher thread count (74 avg vs 35 avg at 50 conns) and correspondingly higher CPU usage (76.3% vs 70.9% avg), which partially compensates for the longer per-request time.
+The ~3.9x throughput difference (95K health vs 24K JWT at 100 conns) is fully explained by the ~4.6x per-request latency ratio at that connection level (0.77ms health vs 3.56ms JWT P50). With a fixed number of connections, throughput is inversely proportional to per-request latency — if each JWT request takes 4.6x longer to process, throughput drops by approximately that factor. The slight difference between the throughput ratio (3.9x) and the latency ratio (4.6x) is accounted for by JWT's higher thread count (127 peak vs health baseline) and correspondingly higher CPU usage (85.0% peak vs health baseline), which partially compensates for the longer per-request time.
 
 The latency decomposition (see <<Latency Decomposition>>) shows the 1.5ms JWT-specific overhead at 50 connections comes from: request-scoped CDI producers, HTTP Authorization header extraction, claims map construction, and complex JSON response serialization — none of which the health endpoint requires.
 
