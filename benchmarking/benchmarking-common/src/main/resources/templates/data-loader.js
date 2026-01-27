@@ -703,13 +703,23 @@ class BenchmarkDataLoader {
 // Create global instance
 const benchmarkLoader = new BenchmarkDataLoader();
 
+// Hide 'Detailed' nav link for non-micro benchmarks (no JMH data available)
+function hideDetailedNavIfNeeded(data) {
+    if (data.metadata?.benchmarkType && !data.metadata.benchmarkType.toLowerCase().includes('micro')) {
+        const detailedLink = document.querySelector('a.nav-link[href="detailed.html"]');
+        if (detailedLink) detailedLink.style.display = 'none';
+    }
+}
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         const pageType = document.body.dataset.pageType || 'index';
         benchmarkLoader.updatePage(pageType);
+        benchmarkLoader.loadData().then(hideDetailedNavIfNeeded);
     });
 } else {
     const pageType = document.body.dataset.pageType || 'index';
     benchmarkLoader.updatePage(pageType);
+    benchmarkLoader.loadData().then(hideDetailedNavIfNeeded);
 }

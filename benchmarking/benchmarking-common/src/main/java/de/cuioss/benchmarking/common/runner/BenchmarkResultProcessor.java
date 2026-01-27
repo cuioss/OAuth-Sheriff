@@ -130,7 +130,9 @@ public class BenchmarkResultProcessor {
         String deploymentPath = structure.getDeploymentDir().toString();
         reportGen.generateIndexPage(benchmarkData, benchmarkType, deploymentPath);
         reportGen.generateTrendsPage(deploymentPath);
-        reportGen.generateDetailedPage(deploymentPath);
+        if (benchmarkType == BenchmarkType.MICRO) {
+            reportGen.generateDetailedPage(deploymentPath);
+        }
         reportGen.copySupportFiles(deploymentPath);
     }
 

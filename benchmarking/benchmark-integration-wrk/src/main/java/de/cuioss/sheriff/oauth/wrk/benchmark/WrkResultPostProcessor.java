@@ -180,7 +180,6 @@ public class WrkResultPostProcessor {
         String deploymentPath = structure.getDeploymentDir().toString();
         reportGenerator.generateIndexPage(benchmarkData, BenchmarkType.INTEGRATION, deploymentPath);
         reportGenerator.generateTrendsPage(deploymentPath);
-        reportGenerator.generateDetailedPage(deploymentPath);
         reportGenerator.copySupportFiles(deploymentPath);
 
         // Collect real-time Prometheus metrics for the benchmark execution
