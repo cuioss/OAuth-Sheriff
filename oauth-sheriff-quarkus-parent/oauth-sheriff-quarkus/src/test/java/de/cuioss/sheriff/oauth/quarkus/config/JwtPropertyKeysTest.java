@@ -109,6 +109,31 @@ class JwtPropertyKeysTest {
     }
 
     @Nested
+    @DisplayName("Keycloak Properties")
+    class KeycloakProperties {
+
+        @Test
+        @DisplayName("should have correct keycloak base path")
+        void shouldHaveCorrectKeycloakBasePath() {
+            assertEquals("sheriff.oauth.keycloak", JwtPropertyKeys.KEYCLOAK.BASE);
+        }
+
+        @Test
+        @DisplayName("should have correct default roles mapper enabled property")
+        void shouldHaveCorrectDefaultRolesMapperEnabledProperty() {
+            assertEquals("sheriff.oauth.keycloak.default-roles-mapper.enabled",
+                    JwtPropertyKeys.KEYCLOAK.DEFAULT_ROLES_MAPPER_ENABLED);
+        }
+
+        @Test
+        @DisplayName("should have correct default groups mapper enabled property")
+        void shouldHaveCorrectDefaultGroupsMapperEnabledProperty() {
+            assertEquals("sheriff.oauth.keycloak.default-groups-mapper.enabled",
+                    JwtPropertyKeys.KEYCLOAK.DEFAULT_GROUPS_MAPPER_ENABLED);
+        }
+    }
+
+    @Nested
     @DisplayName("Health Properties")
     class HealthProperties {
 

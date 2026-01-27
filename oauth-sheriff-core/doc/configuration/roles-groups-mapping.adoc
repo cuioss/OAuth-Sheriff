@@ -180,3 +180,57 @@ IssuerConfig issuerConfig = IssuerConfig.builder()
     .claimMapper("roles", new CustomRoleMapper())
     .build();
 ----
+
+== CDI-based Custom Mapper Registration (Quarkus)
+
+When using the Quarkus extension, custom claim mappers can be registered as CDI beans and are automatically discovered and applied to all configured issuers. This replaces the need for per-issuer mapper configuration.
+
+=== Creating a Custom DiscoverableClaimMapper
+
+Implement the `DiscoverableClaimMapper` interface as an `@ApplicationScoped` CDI bean:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyCustomClaimMapper implements DiscoverableClaimMapper {
+
+    @Override
+    public String getClaimName() {
+        return "custom-roles"; // The claim name this mapper handles
+    }
+
+    @Override
+    public ClaimMapper getMapper() {
+        return new MyCustomMapperImpl(); // Your ClaimMapper implementation
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true; // Conditionally enable via configuration
+    }
+}
+----
+
+The mapper is automatically discovered by the `ClaimMapperRegistry` and applied globally to all configured issuers.
+
+NOTE: The `isEnabled()` method defaults to `true`. You only need to override it if you want to conditionally activate the mapper via configuration properties.
+
+=== Built-in Keycloak Mappers
+
+The Quarkus extension provides built-in CDI mapper beans for Keycloak's default claim structures. These are controlled by global configuration properties:
+
+[source,properties]
+----
+# Enable Keycloak default roles mapper (maps realm_access.roles to roles)
+sheriff.oauth.keycloak.default-roles-mapper.enabled=true
+
+# Enable Keycloak default groups mapper (processes groups claim)
+sheriff.oauth.keycloak.default-groups-mapper.enabled=true
+----
+
+Both properties default to `false`. When enabled, the corresponding mapper is applied to all configured issuers.
+
+=== Constraints
+
+* Each claim name must have at most one enabled `DiscoverableClaimMapper`. If duplicates are detected, the application will fail fast with an `IllegalStateException` during startup.
+* Discovered mappers are applied globally to all issuers. For issuer-specific mapper logic, implement the conditional behavior within the `ClaimMapper` implementation itself.

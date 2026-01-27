@@ -95,6 +95,20 @@ public final class OAuthSheriffQuarkusLogMessages {
                 .identifier(13)
                 .build();
 
+        // Claim Mapper Registry Messages (014-015)
+
+        public static final LogRecord CLAIM_MAPPER_REGISTRY_INITIALIZED = LogRecordModel.builder()
+                .template("Claim mapper registry initialized with %s custom mapper(s): %s")
+                .prefix(PREFIX)
+                .identifier(14)
+                .build();
+
+        public static final LogRecord NO_CUSTOM_CLAIM_MAPPERS_DISCOVERED = LogRecordModel.builder()
+                .template("No custom claim mappers discovered")
+                .prefix(PREFIX)
+                .identifier(15)
+                .build();
+
         // Metrics Messages (021-030)
 
         public static final LogRecord INITIALIZING_JWT_METRICS_COLLECTOR = LogRecordModel.builder()

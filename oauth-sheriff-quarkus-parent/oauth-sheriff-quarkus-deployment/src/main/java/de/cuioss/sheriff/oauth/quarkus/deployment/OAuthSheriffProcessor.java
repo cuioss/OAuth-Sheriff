@@ -42,6 +42,10 @@ import de.cuioss.sheriff.oauth.quarkus.config.AccessLogFilterConfigProducer;
 import de.cuioss.sheriff.oauth.quarkus.config.ParserConfigResolver;
 import de.cuioss.sheriff.oauth.quarkus.interceptor.BearerTokenInterceptor;
 import de.cuioss.sheriff.oauth.quarkus.logging.CustomAccessLogFilter;
+import de.cuioss.sheriff.oauth.quarkus.mapper.ClaimMapperRegistry;
+import de.cuioss.sheriff.oauth.quarkus.mapper.DiscoverableClaimMapper;
+import de.cuioss.sheriff.oauth.quarkus.mapper.keycloak.KeycloakGroupsMapperBean;
+import de.cuioss.sheriff.oauth.quarkus.mapper.keycloak.KeycloakRolesMapperBean;
 import de.cuioss.sheriff.oauth.quarkus.metrics.JwtMetricsCollector;
 import de.cuioss.sheriff.oauth.quarkus.producer.BearerTokenProducer;
 import de.cuioss.sheriff.oauth.quarkus.producer.TokenValidatorProducer;
@@ -218,7 +222,9 @@ public class OAuthSheriffProcessor {
                 KeycloakDefaultRolesMapper.class,
                 OffsetDateTimeMapper.class,
                 ScopeMapper.class,
-                StringSplitterMapper.class)
+                StringSplitterMapper.class,
+                // CDI-discoverable claim mapper interface
+                DiscoverableClaimMapper.class)
                 .methods(false)  // Methods not needed - mappers are called via interface
                 .fields(false)   // Fields not needed - no field access
                 .constructors(true) // Only constructors needed for instantiation
@@ -280,7 +286,11 @@ public class OAuthSheriffProcessor {
                         de.cuioss.sheriff.oauth.quarkus.config.IssuerConfigResolver.class,
                         ParserConfigResolver.class,
                         VertxServletObjectsResolver.class,
-                        JwtMetricsCollector.class
+                        JwtMetricsCollector.class,
+                        // CDI-based claim mapper infrastructure
+                        ClaimMapperRegistry.class,
+                        KeycloakRolesMapperBean.class,
+                        KeycloakGroupsMapperBean.class
                 )
                 // Register additional configuration producers using class references
                 .addBeanClass(AccessLogFilterConfigProducer.class)
@@ -314,7 +324,9 @@ public class OAuthSheriffProcessor {
         unremovableBeans.produce(UnremovableBeanBuildItem.beanTypes(
                 DotName.createSimple(TokenValidator.class.getName()),
                 DotName.createSimple(JwtMetricsCollector.class.getName()),
-                DotName.createSimple(MeterRegistry.class.getName())
+                DotName.createSimple(MeterRegistry.class.getName()),
+                // Ensure user-provided DiscoverableClaimMapper implementations are discovered
+                DotName.createSimple(DiscoverableClaimMapper.class.getName())
         ));
     }
 

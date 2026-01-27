@@ -17,10 +17,9 @@ package de.cuioss.sheriff.oauth.quarkus.config;
 
 import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
-import de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultGroupsMapper;
-import de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultRolesMapper;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoaderConfig;
 import de.cuioss.sheriff.oauth.core.security.SignatureAlgorithmPreferences;
+import de.cuioss.sheriff.oauth.quarkus.mapper.ClaimMapperRegistry;
 import de.cuioss.tools.logging.CuiLogger;
 import org.eclipse.microprofile.config.Config;
 import org.jspecify.annotations.Nullable;
@@ -59,25 +58,47 @@ public class IssuerConfigResolver {
 
     private final Config config;
     private final RetryConfig retryConfig;
+    private final @Nullable ClaimMapperRegistry claimMapperRegistry;
 
     /**
      * Creates a new IssuerConfigResolver with the specified configuration.
+     * <p>
+     * This constructor creates a resolver without a claim mapper registry.
+     * No custom claim mappers will be applied to resolved issuer configurations.
+     * </p>
      *
      * @param config the configuration instance to use for property resolution
      */
     public IssuerConfigResolver(Config config) {
-        this(config, RetryConfig.defaults());
+        this(config, RetryConfig.defaults(), null);
     }
 
     /**
      * Creates a new IssuerConfigResolver with the specified configuration and retry config.
+     * <p>
+     * This constructor creates a resolver without a claim mapper registry.
+     * No custom claim mappers will be applied to resolved issuer configurations.
+     * </p>
      *
      * @param config the configuration instance to use for property resolution
      * @param retryConfig the retry configuration to use for HTTP operations
      */
     public IssuerConfigResolver(Config config, RetryConfig retryConfig) {
+        this(config, retryConfig, null);
+    }
+
+    /**
+     * Creates a new IssuerConfigResolver with the specified configuration, retry config,
+     * and claim mapper registry.
+     *
+     * @param config the configuration instance to use for property resolution
+     * @param retryConfig the retry configuration to use for HTTP operations
+     * @param claimMapperRegistry the registry of CDI-discovered claim mappers, may be {@code null}
+     */
+    public IssuerConfigResolver(Config config, RetryConfig retryConfig, @Nullable ClaimMapperRegistry claimMapperRegistry) {
         this.config = config;
         this.retryConfig = retryConfig;
+        this.claimMapperRegistry = claimMapperRegistry;
     }
 
     /**
@@ -191,8 +212,8 @@ public class IssuerConfigResolver {
         // Configure JWKS source (mutually exclusive)
         configureJwksSource(builder, issuerName);
 
-        // Configure Keycloak mappers if enabled
-        configureKeycloakMappers(builder, issuerName);
+        // Configure discovered claim mappers (applied globally to all issuers)
+        configureDiscoveredClaimMappers(builder);
 
         // Let the builder validate and create the instance
         return builder.build();
@@ -418,24 +439,21 @@ public class IssuerConfigResolver {
     }
 
     /**
-     * Configures Keycloak default mappers if enabled for this issuer.
+     * Configures discovered claim mappers from the registry.
      * <p>
-     * Adds Keycloak-specific claim mappers based on per-issuer configuration.
-     * This allows different issuers to have different Keycloak mapper settings.
+     * Adds all enabled CDI-discovered claim mappers to the issuer configuration.
+     * These mappers are applied globally to all configured issuers.
      * </p>
      */
-    private void configureKeycloakMappers(IssuerConfig.IssuerConfigBuilder builder, String issuerName) {
-        KeycloakMapperConfigResolver keycloakResolver = new KeycloakMapperConfigResolver(config);
-        KeycloakMapperConfigResolver.KeycloakMapperConfig keycloakConfig = keycloakResolver.resolve(issuerName);
-
-        if (keycloakConfig.isDefaultRolesEnabled()) {
-            builder.claimMapper("roles", new KeycloakDefaultRolesMapper());
-            LOGGER.debug("Added Keycloak default roles mapper for issuer: %s", issuerName);
+    private void configureDiscoveredClaimMappers(IssuerConfig.IssuerConfigBuilder builder) {
+        if (claimMapperRegistry == null) {
+            return;
         }
-
-        if (keycloakConfig.isDefaultGroupsEnabled()) {
-            builder.claimMapper("groups", new KeycloakDefaultGroupsMapper());
-            LOGGER.debug("Added Keycloak default groups mapper for issuer: %s", issuerName);
+        for (String claimName : claimMapperRegistry.getRegisteredClaimNames()) {
+            claimMapperRegistry.getMapper(claimName).ifPresent(mapper -> {
+                builder.claimMapper(claimName, mapper);
+                LOGGER.debug("Added discovered claim mapper for claim: %s", claimName);
+            });
         }
     }
 }
