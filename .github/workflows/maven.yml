@@ -48,6 +48,7 @@ jobs:
 
   sonar-build:
     needs: build
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     steps:
@@ -105,7 +106,7 @@ jobs:
 
   deploy-snapshot:
     needs: sonar-build
-    if: github.ref == 'refs/heads/main'
+    if: always() && github.ref == 'refs/heads/main' && needs.sonar-build.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
