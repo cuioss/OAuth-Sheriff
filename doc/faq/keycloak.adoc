@@ -191,9 +191,9 @@ Use built-in mappers instead of custom protocol mappers (CUI JWT v1.0+):
 
 [source,properties]
 ----
-# Enable Keycloak default mappers per issuer
-sheriff.oauth.issuers.my-keycloak.keycloak.mappers.default-roles.enabled=true
-sheriff.oauth.issuers.my-keycloak.keycloak.mappers.default-groups.enabled=true
+# Enable Keycloak default mappers globally
+sheriff.oauth.keycloak.default-roles-mapper.enabled=true
+sheriff.oauth.keycloak.default-groups-mapper.enabled=true
 ----
 
 This automatically maps:
@@ -203,10 +203,10 @@ This automatically maps:
 
 Benefits:
 
-- Per-issuer configuration flexibility
+- Global CDI-based registration via `DiscoverableClaimMapper` SPI
 - No Keycloak realm modification needed
 - Works with standard Keycloak token structure
-- Different issuers can use different mapper strategies
+- Custom mappers can be added by implementing `DiscoverableClaimMapper` as CDI beans
 
 *Common Errors:*
 |===

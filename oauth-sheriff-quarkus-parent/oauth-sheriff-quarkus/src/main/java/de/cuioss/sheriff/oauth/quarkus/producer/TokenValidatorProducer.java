@@ -25,6 +25,7 @@ import de.cuioss.sheriff.oauth.quarkus.config.AccessTokenCacheConfigResolver;
 import de.cuioss.sheriff.oauth.quarkus.config.IssuerConfigResolver;
 import de.cuioss.sheriff.oauth.quarkus.config.ParserConfigResolver;
 import de.cuioss.sheriff.oauth.quarkus.config.RetryStrategyConfigResolver;
+import de.cuioss.sheriff.oauth.quarkus.mapper.ClaimMapperRegistry;
 import de.cuioss.tools.logging.CuiLogger;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -63,6 +64,7 @@ public class TokenValidatorProducer {
     private static final CuiLogger LOGGER = new CuiLogger(TokenValidatorProducer.class);
 
     private final Config config;
+    private final ClaimMapperRegistry claimMapperRegistry;
 
     @Produces
     @ApplicationScoped
@@ -77,8 +79,9 @@ public class TokenValidatorProducer {
     SecurityEventCounter securityEventCounter;
 
     @SuppressWarnings("java:S2637") // False positive: fields are initialized in @PostConstruct
-    public TokenValidatorProducer(Config config) {
+    public TokenValidatorProducer(Config config, ClaimMapperRegistry claimMapperRegistry) {
         this.config = config;
+        this.claimMapperRegistry = claimMapperRegistry;
     }
 
     /**
@@ -97,8 +100,8 @@ public class TokenValidatorProducer {
         RetryConfig retryConfig = retryResolver.resolveRetryConfig();
 
         // Resolve issuer configurations using the dedicated resolver
-        // (Keycloak mappers are now configured per-issuer in IssuerConfigResolver)
-        IssuerConfigResolver issuerConfigResolver = new IssuerConfigResolver(config, retryConfig);
+        // CDI-discovered claim mappers are applied globally via ClaimMapperRegistry
+        IssuerConfigResolver issuerConfigResolver = new IssuerConfigResolver(config, retryConfig, claimMapperRegistry);
         issuerConfigs = issuerConfigResolver.resolveIssuerConfigs();
 
         // Create SecurityEventCounter for proper initialization

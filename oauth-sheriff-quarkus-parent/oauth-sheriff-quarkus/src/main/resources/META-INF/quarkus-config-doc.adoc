@@ -164,42 +164,42 @@ Each issuer can have a JWKS (JSON Web Key Set) endpoint configuration. There are
 
 == Keycloak Integration
 
-The extension provides optional default claim mappers for seamless integration with Keycloak's standard token structure. These mappers are configured per-issuer and are disabled by default.
+The extension provides optional default claim mappers for seamless integration with Keycloak's standard token structure. These mappers are configured globally via CDI beans and are disabled by default.
 
 [cols="2,1,5"]
 |===
 |Property |Type |Description
 
-|`sheriff.oauth.issuers.<issuer-name>.keycloak.mappers.default-roles.enabled`
+|`sheriff.oauth.keycloak.default-roles-mapper.enabled`
 |boolean (default: false)
-|Enables the default roles mapper for this issuer that transforms Keycloak's `realm_access.roles` claim to the standard `roles` claim. This allows applications to work with Keycloak tokens without requiring custom protocol mappers.
+|Enables the default roles mapper that transforms Keycloak's `realm_access.roles` claim to the standard `roles` claim. This allows applications to work with Keycloak tokens without requiring custom protocol mappers.
 
-|`sheriff.oauth.issuers.<issuer-name>.keycloak.mappers.default-groups.enabled`
+|`sheriff.oauth.keycloak.default-groups-mapper.enabled`
 |boolean (default: false)
-|Enables the default groups mapper for this issuer that processes Keycloak's standard `groups` claim. This provides consistent group membership handling for Keycloak tokens.
+|Enables the default groups mapper that processes Keycloak's standard `groups` claim. This provides consistent group membership handling for Keycloak tokens.
 |===
 
 === Configuration Example
 
 [source,properties]
 ----
-# Standard issuer configuration with Keycloak default mappers
+# Standard issuer configuration
 sheriff.oauth.issuers.keycloak.issuer-identifier=https://keycloak.example.com/realms/master
 sheriff.oauth.issuers.keycloak.well-known-url=https://keycloak.example.com/realms/master/.well-known/openid-configuration
 
-# Enable Keycloak default mappers for this issuer
-sheriff.oauth.issuers.keycloak.keycloak.mappers.default-roles.enabled=true
-sheriff.oauth.issuers.keycloak.keycloak.mappers.default-groups.enabled=true
+# Enable Keycloak default mappers globally
+sheriff.oauth.keycloak.default-roles-mapper.enabled=true
+sheriff.oauth.keycloak.default-groups-mapper.enabled=true
 ----
 
 === Benefits
 
-* **Per-Issuer Configuration**: Each issuer can have different Keycloak mapper settings
+* **Global CDI-based Registration**: Claim mappers are discovered and registered via CDI using the `DiscoverableClaimMapper` SPI
 * **Zero Configuration**: Works with Keycloak's default token structure without custom protocol mappers
 * **Opt-in Feature**: Disabled by default, enabled when needed
 * **Simplified Integration**: Reduces Keycloak realm configuration complexity
 * **Standards Compliance**: Maintains compatibility with standard JWT claim names
-* **Flexible Deployment**: Mix Keycloak and non-Keycloak issuers with appropriate configurations
+* **Extensible**: Custom mappers can be added by implementing `DiscoverableClaimMapper` as CDI beans
 
 == HTTP Access Log Filter Configuration
 
@@ -341,10 +341,10 @@ For quick reference, here are all the default values in one place:
 |`sheriff.oauth.health.jwks.cache-seconds`
 |30
 
-|`sheriff.oauth.issuers.<issuer-name>.keycloak.mappers.default-roles.enabled`
+|`sheriff.oauth.keycloak.default-roles-mapper.enabled`
 |false
 
-|`sheriff.oauth.issuers.<issuer-name>.keycloak.mappers.default-groups.enabled`
+|`sheriff.oauth.keycloak.default-groups-mapper.enabled`
 |false
 |===
 

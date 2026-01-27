@@ -371,29 +371,35 @@ public final class JwtPropertyKeys {
          */
         public static final String MAX_RETIRED_KEY_SETS = HTTP_BASE + "max-retired-key-sets";
 
-        // === Keycloak Configuration ===
+    }
 
+    /**
+     * Global Keycloak mapper configuration properties.
+     * <p>
+     * These properties control the activation of built-in Keycloak claim mappers
+     * globally across all configured issuers. The mappers are registered as CDI beans
+     * and discovered by the {@link de.cuioss.sheriff.oauth.quarkus.mapper.ClaimMapperRegistry}.
+     * </p>
+     * <p>
+     * All properties are prefixed with "sheriff.oauth.keycloak".
+     * </p>
+     *
+     * @since 1.0
+     */
+    @UtilityClass
+    public static final class KEYCLOAK {
         /**
-         * Base template for Keycloak configurations.
+         * Base path for global Keycloak configurations.
          */
-        public static final String KEYCLOAK_BASE = BASE + "keycloak.";
+        public static final String BASE = PREFIX + ".keycloak";
 
         /**
-         * Base template for Keycloak mapper configurations.
-         */
-        public static final String KEYCLOAK_MAPPERS_BASE = KEYCLOAK_BASE + "mappers.";
-
-        /**
-         * Enable Keycloak default roles mapper for realm_access.roles claim.
-         * Template: "sheriff.oauth.issuers.%s.keycloak.mappers.default-roles.enabled"
+         * Enable the Keycloak default roles mapper globally.
+         * Property: "sheriff.oauth.keycloak.default-roles-mapper.enabled"
          * <p>
-         * When enabled, this mapper extracts roles from Keycloak's standard
-         * {@code realm_access.roles} claim and maps them to the expected
-         * {@code roles} claim format used by the CUI JWT library.
-         * </p>
-         * <p>
-         * This eliminates the need for custom protocol mappers in Keycloak
-         * to expose realm roles in the expected format.
+         * When enabled, the {@link de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultRolesMapper}
+         * is registered as a CDI bean and applied to all configured issuers.
+         * It maps Keycloak's {@code realm_access.roles} to the {@code roles} claim.
          * </p>
          * <p>
          * Default value is {@code false}.
@@ -401,19 +407,15 @@ public final class JwtPropertyKeys {
          *
          * @see de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultRolesMapper
          */
-        public static final String KEYCLOAK_DEFAULT_ROLES_ENABLED = KEYCLOAK_MAPPERS_BASE + "default-roles.enabled";
+        public static final String DEFAULT_ROLES_MAPPER_ENABLED = BASE + ".default-roles-mapper.enabled";
 
         /**
-         * Enable Keycloak default groups mapper for groups claim.
-         * Template: "sheriff.oauth.issuers.%s.keycloak.mappers.default-groups.enabled"
+         * Enable the Keycloak default groups mapper globally.
+         * Property: "sheriff.oauth.keycloak.default-groups-mapper.enabled"
          * <p>
-         * When enabled, this mapper processes Keycloak's standard {@code groups}
-         * claim and ensures they are properly formatted for the CUI JWT library's
-         * authorization mechanisms.
-         * </p>
-         * <p>
-         * This provides compatibility with Keycloak's default group membership
-         * mapper without requiring additional configuration.
+         * When enabled, the {@link de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultGroupsMapper}
+         * is registered as a CDI bean and applied to all configured issuers.
+         * It processes Keycloak's standard {@code groups} claim.
          * </p>
          * <p>
          * Default value is {@code false}.
@@ -421,7 +423,7 @@ public final class JwtPropertyKeys {
          *
          * @see de.cuioss.sheriff.oauth.core.domain.claim.mapper.KeycloakDefaultGroupsMapper
          */
-        public static final String KEYCLOAK_DEFAULT_GROUPS_ENABLED = KEYCLOAK_MAPPERS_BASE + "default-groups.enabled";
+        public static final String DEFAULT_GROUPS_MAPPER_ENABLED = BASE + ".default-groups-mapper.enabled";
     }
 
     /**
