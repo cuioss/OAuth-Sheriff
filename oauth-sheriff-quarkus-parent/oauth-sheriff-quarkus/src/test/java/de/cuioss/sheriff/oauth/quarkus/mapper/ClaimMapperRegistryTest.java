@@ -24,7 +24,6 @@ import jakarta.enterprise.inject.Instance;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -134,8 +133,9 @@ class ClaimMapperRegistryTest {
         var registry = createRegistry(List.of(mapper));
         registry.init();
 
+        var claimNames = registry.getRegisteredClaimNames();
         assertThrows(UnsupportedOperationException.class,
-                () -> registry.getRegisteredClaimNames().add("extra"));
+                () -> claimNames.add("extra"));
     }
 
     @Test

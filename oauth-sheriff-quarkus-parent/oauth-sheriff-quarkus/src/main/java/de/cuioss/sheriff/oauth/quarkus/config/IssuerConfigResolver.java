@@ -17,7 +17,6 @@ package de.cuioss.sheriff.oauth.quarkus.config;
 
 import de.cuioss.http.client.adapter.RetryConfig;
 import de.cuioss.sheriff.oauth.core.IssuerConfig;
-import de.cuioss.sheriff.oauth.core.domain.claim.mapper.ClaimMapper;
 import de.cuioss.sheriff.oauth.core.jwks.http.HttpJwksLoaderConfig;
 import de.cuioss.sheriff.oauth.core.security.SignatureAlgorithmPreferences;
 import de.cuioss.sheriff.oauth.quarkus.mapper.ClaimMapperRegistry;
