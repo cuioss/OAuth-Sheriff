@@ -185,11 +185,16 @@ class BenchmarkDataLoader {
         const chartData = data.chartData || {};
         const percentilesData = chartData.percentilesData || {};
         const canvas = document.getElementById(canvasId);
-        
+
         if (!canvas || !window.Chart) return;
 
         const ctx = canvas.getContext('2d');
-        
+
+        // Use logarithmic scale for micro benchmarks (wide value range),
+        // linear for integration benchmarks (narrow value range)
+        const benchmarkType = (data.metadata?.benchmarkType || '').toLowerCase();
+        const useLogScale = benchmarkType.includes('micro');
+
         // Create datasets for each percentile level
         const percentileLabels = percentilesData.percentileLabels || [];
         const benchmarks = percentilesData.benchmarks || [];
@@ -254,7 +259,8 @@ class BenchmarkDataLoader {
                             display: true,
                             text: 'Latency (ms/op)'
                         },
-                        type: 'logarithmic',
+                        type: useLogScale ? 'logarithmic' : 'linear',
+                        beginAtZero: !useLogScale,
                         ticks: {
                             callback: function(value) {
                                 if (value >= 1000) {
