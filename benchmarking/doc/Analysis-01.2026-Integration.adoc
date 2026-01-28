@@ -195,73 +195,11 @@ This constant ratio is the most significant finding of the connection sweep. It 
 2. **Library validation time** — 77µs (0.077ms) P50 from JMH micro-benchmark
 3. **JWKS refresh** — Periodic Keycloak communication for public key updates
 
-=== Latency Decomposition (Measured with Mock Endpoint)
+=== Latency Decomposition
 
-A **mock JWT endpoint** (`/mock-jwt/validate`) was created to directly measure the latency decomposition. The mock endpoint replicates the JWT endpoint's full HTTP processing path — CDI injection, `HttpServletRequestResolver.resolveHeaderMap()`, `Authorization` header extraction, and `ValidationResponse` JSON serialization — but **skips the actual JWT library validation** (`tokenValidator.createAccessToken()`). This turns the inferred decomposition into a measured one.
+A five-layer ablation study decomposes the JWT P50 latency (1.91ms) into measured layers, isolating each processing component from shared infrastructure through CDI producer resolution. The dominant cost is CDI producer chain + JWT validation at 57% (1.087ms), followed by JAX-RS POST routing at 14% (0.274ms). CDI `@ApplicationScoped` injection was confirmed to have zero per-request cost.
 
-==== Mock Endpoint Benchmark Results (50 connections)
-
-[cols="2,2,2,2,2", options="header"]
-|===
-|Endpoint
-|P50 (ms)
-|P90 (ms)
-|P99 (ms)
-|Throughput
-
-|Health (`/q/health/live`)
-|0.416
-|2.25
-|7.78
-|87,400 ops/s
-
-|**Mock JWT** (`/mock-jwt/validate`)
-|**0.833**
-|**3.14**
-|**9.04**
-|**45,877 ops/s**
-
-|JWT (`/jwt/validate`)
-|1.95
-|4.49
-|12.26
-|22,454 ops/s
-|===
-
-==== Three-Layer Decomposition
-
-[cols="3,2,2", options="header"]
-|===
-|Component
-|Latency (P50)
-|Percentage
-
-|**Shared infrastructure** (Docker, TLS, HTTP/2, Quarkus routing) — measured by health endpoint
-|0.416ms
-|21%
-
-|**Header extraction + response serialization** (`resolveHeaderMap()`, `Authorization` parsing, `HashMap` construction, `ValidationResponse` JSON) — measured by mock endpoint minus health
-|0.417ms
-|21%
-
-|**CDI producer chain + JWT validation** (`Instance.get()`, producer resolution, `createAccessToken()`, claims checking) — measured by JWT minus mock endpoint
-|1.117ms
-|**57%**
-|===
-
-**Total JWT P50**: 1.95ms = 0.416ms (shared) + 0.417ms (serialization) + 1.117ms (CDI + validation)
-
-==== Key Insight: JMH vs Integration Validation Cost
-
-The JMH micro-benchmark measures isolated JWT library validation at 0.077ms (77µs). The mock endpoint experiment reveals the actual cost difference between JWT and mock is 1.117ms — **14.5x more** than the isolated library. This gap includes:
-
-* **CDI `Instance<BearerTokenResult>` proxy resolution** — CDI creates and invokes the producer per request
-* **`InjectionPoint` metadata extraction** — CDI inspects `@BearerToken` annotation parameters
-* **`@Timed` micrometer instrumentation** — metrics recording overhead on every validation
-* **`tokenValidator.createAccessToken()` under concurrency** — 50 concurrent connections competing for the lock-free cache, CPU cache line invalidation, memory barriers
-* **`AccessTokenContent` construction** — real object allocation from parsed claims (vs JMH reusing pre-parsed data)
-
-The previous (inferred) decomposition attributed 74% to "CDI/serialization" and only 4% to the JWT library. The measured data reverses this: header extraction and serialization cost only 21% (0.417ms), while the CDI producer chain combined with JWT validation accounts for 57% (1.117ms).
+Full methodology, variant descriptions, raw benchmark data, and analysis: link:Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition — Ablation Study].
 
 ==== Scaling Observation
 
@@ -278,7 +216,7 @@ At higher connection counts, the shared infrastructure cost grows (queuing), but
 
 The ~3.9x throughput difference (95K health vs 24K JWT at 100 conns) is fully explained by the ~4.6x per-request latency ratio at that connection level (0.77ms health vs 3.56ms JWT P50). With a fixed number of connections, throughput is inversely proportional to per-request latency — if each JWT request takes 4.6x longer to process, throughput drops by approximately that factor. The slight difference between the throughput ratio (3.9x) and the latency ratio (4.6x) is accounted for by JWT's higher thread count (127 peak vs health baseline) and correspondingly higher CPU usage (85.0% peak vs health baseline), which partially compensates for the longer per-request time.
 
-The measured latency decomposition (see <<Latency Decomposition (Measured with Mock Endpoint)>>) shows JWT-specific overhead at 50 connections breaks into: 0.417ms for header extraction and response serialization, plus 1.117ms for the CDI producer chain and JWT validation — none of which the health endpoint requires.
+The measured latency decomposition (see <<Latency Decomposition>>) shows JWT-specific overhead at 50 connections breaks into: 0.274ms for JAX-RS POST routing + Jackson, 0.039ms for Vert.x context resolution and header parsing, plus 1.087ms for the CDI producer chain and JWT validation — none of which the health endpoint requires.
 
 === Endpoint Implementation Comparison
 
@@ -367,8 +305,9 @@ Comprehensive WRK stress testing across 50-300 connections reveals:
 * **Excellent stability**: JWT maintains 22.7-24.3K ops/s across all connection counts (50-300)
 * **Optimal configuration**: 100 connections provides best balance (95.4K health, 24.3K JWT)
 * **Constant latency ratio**: JWT/Health P50 ratio stays at 4.55x (SD 0.09) across all connection levels — JWT-specific overhead is a fixed multiplier, not a load-dependent bottleneck
-* **Measured latency decomposition** (at 50 conns, using mock endpoint): 21% shared infrastructure (0.416ms), 21% header extraction + response serialization (0.417ms), 57% CDI producer chain + JWT validation (1.117ms)
+* **Five-layer measured decomposition** (at 50 conns, ablation study): 26.7% shared infrastructure (0.510ms), 14.3% JAX-RS POST routing + Jackson (0.274ms), ~0% CDI `@ApplicationScoped` injection, 1.9% Vert.x context resolution (0.036ms), 0.2% Authorization parsing (0.003ms), 56.9% CDI producer chain + JWT validation (1.087ms)
+* **CDI `@ApplicationScoped` confirmed zero per-request cost**: Bare baseline (zero CDI) was 0.086ms _slower_ than CDI-injected baseline — proving constructor injection is resolved at startup, not per request
 * **Throughput gap explained**: The ~3.9x throughput difference is fully accounted for by the ~4.5x per-request latency ratio
 * **Cache effectiveness**: Lock-free cache achieves 100% hit rate (size 20), zero performance collapse
-* **JMH vs integration gap**: Core library validates in 77µs (JMH isolation), but integration validation costs 1.117ms — 14.5x more due to CDI producer resolution, `@Timed` instrumentation, concurrent cache contention, and real object allocation
-* **Dominant cost**: CDI producer chain combined with JWT validation accounts for 57% (1.117ms) of request latency — the primary optimization target. Header extraction and serialization add another 21% (0.417ms)
+* **JMH vs integration gap**: Core library validates in 77µs (JMH isolation), but integration validation costs 1.087ms — 14.1x more due to CDI producer resolution, `@Timed` instrumentation, concurrent cache contention, and real object allocation
+* **Dominant cost**: CDI producer chain combined with JWT validation accounts for 57% (1.087ms) of request latency — the primary optimization target. JAX-RS POST routing adds 14% (0.274ms); Vert.x context resolution and header parsing are negligible (~2% combined)
