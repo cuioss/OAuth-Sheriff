@@ -82,75 +82,88 @@ JWT validation throughput remains stable (22.7-24.3K ops/s) across all connectio
 
 == Latency Decomposition
 
-=== Five-Layer Breakdown
+=== Measured Endpoints (Ablation Study)
 
-Analysis of where the 1.91ms P50 JWT validation latency originates:
-
-[cols="1,2,2,2", options="header"]
+[cols="2,2,2", options="header"]
 |===
-| Layer | Component | Latency | Percentage
+| Endpoint | P50 Latency | Throughput
 
-| 5
-| CDI Producer Chain + JWT Validation
-| 1.087ms
-| **57%**
-
-| 4
-| Shared Infrastructure
+| Health (`/q/health/live`)
 | 0.510ms
-| **27%**
+| 64,947 ops/s
 
-| 3
-| JAX-RS Routing
-| 0.274ms
-| 14%
+| Mock JWT (`/mock-jwt/validate`)
+| 0.823ms
+| 46,800 ops/s
 
-| 2
-| Vert.x + Header Parsing
-| 0.039ms
-| 2%
-
-| 1
-| CDI @ApplicationScoped Injection
-| ~0
-| ~0%
+| JWT (`/jwt/validate`)
+| 1.91ms
+| 23,051 ops/s
 |===
+
+The **Mock JWT endpoint** performs identical HTTP processing (CDI injection, header extraction, JSON serialization) but skips JWT validation. This directly measures the validation cost.
+
+=== Latency Breakdown
+
+[cols="2,2,2,2", options="header"]
+|===
+| Component | How Measured | Latency | Percentage
+
+| Shared Infrastructure
+| Health endpoint
+| 0.510ms
+| 27%
+
+| Framework Overhead (POST, JAX-RS, Jackson)
+| Mock JWT − Health
+| 0.313ms
+| 16%
+
+| CDI Producer Chain + JWT Validation
+| JWT − Mock JWT
+| **1.087ms**
+| **57%**
+|===
+
+**Total**: 0.510 + 0.313 + 1.087 = 1.91ms ✓
 
 === Why JWT is Slower than Health
 
-The **1.4ms difference** between JWT (1.91ms) and Health (0.510ms) endpoints is explained by:
+The **1.4ms difference** between JWT (1.91ms) and Health (0.510ms) is explained by two measured gaps:
 
-[cols="2,2,3", options="header"]
+[cols="2,2,2,3", options="header"]
 |===
-| Layer | Additional Latency | What It Does
+| Gap | Measured Endpoints | Latency | What It Represents
 
-| CDI Producer Chain + JWT
-| **1.087ms**
-| `Instance.get()`, token parsing, RSA signature (68µs), claim validation
+| **Framework Overhead**
+| Health → Mock JWT
+| 0.313ms (22%)
+| POST vs GET, JAX-RS routing, Jackson serialization
 
-| JAX-RS Routing
-| 0.274ms
-| Method matching, parameter binding, response serialization
-
-| Header Parsing
-| 0.039ms
-| Authorization header extraction
+| **CDI + JWT Validation**
+| Mock JWT → JWT
+| **1.087ms (78%)**
+| `Instance.get()`, producer chain, JWT library (77µs)
 |===
 
-**Total additional overhead**: ~1.4ms (matches observed 1.91ms - 0.510ms = 1.4ms)
+**Total**: 0.313ms + 1.087ms = **1.4ms** ✓
 
 === Key Insight
 
-The primary latency contributor is **Layer 5: CDI Producer Chain + JWT Validation** at 1.087ms (57%). This includes:
+The **Mock JWT endpoint** (`/mock-jwt/validate`) replicates the full HTTP processing path but skips actual JWT validation. This directly measures the decomposition:
 
-* `Instance<BearerTokenResult>.get()` resolution (CDI overhead)
-* Token extraction from Authorization header
-* JWT parsing and RSA signature verification (68µs)
-* Claim extraction and validation
+* **Health endpoint**: 0.510ms — baseline infrastructure
+* **Mock JWT endpoint**: 0.823ms — adds framework overhead (+0.313ms)
+* **JWT endpoint**: 1.91ms — adds CDI producer + validation (+1.087ms)
 
-NOTE: The JWT library itself (77µs) is only 5.5% of the 1.4ms overhead. The majority (93%) is CDI dependency injection and framework integration.
+Within the 1.087ms CDI + JWT gap:
 
-See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition Analysis] for detailed methodology.
+* JWT library (parsing + RSA signature): **77µs** (7%)
+* CDI producer overhead (`Instance.get()`, `@Timed`, concurrency): **~1.01ms** (93%)
+
+NOTE: The JWT library itself is fast (77µs). The dominant cost is CDI's `Instance<BearerTokenResult>` proxy resolution and producer invocation per request.
+
+See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition Analysis] for detailed methodology and ablation study.
 
 == JWT Library Performance (JMH Analysis)
 
