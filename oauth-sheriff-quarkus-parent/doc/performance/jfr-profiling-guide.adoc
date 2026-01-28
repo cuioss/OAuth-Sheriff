@@ -47,8 +47,8 @@ COPY --from=build /build/target/*-runner /app/application
 # Dockerfile.native.jfr (Profiling)
 FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
 
-# JFR output directory
-RUN mkdir -p /tmp/jfr-output && chmod 777 /tmp/jfr-output
+# JFR output directory (owned by Quarkus non-root user)
+RUN mkdir -p /tmp/jfr-output && chown 1001:0 /tmp/jfr-output && chmod 775 /tmp/jfr-output
 
 # JFR-enabled entrypoint with profiling
 ENTRYPOINT ["/app/application", "-XX:+FlightRecorder", \
