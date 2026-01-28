@@ -119,51 +119,63 @@ The **Mock JWT endpoint** performs identical HTTP processing (CDI injection, hea
 | 0.313ms
 | 16%
 
-| CDI Producer Chain + JWT Validation
-| JWT − Mock JWT
-| **1.087ms**
-| **57%**
+| **CDI Producer Overhead**
+| (JWT − Mock JWT) − JMH
+| **~1.01ms**
+| **53%**
+
+| JWT Library (parsing + RSA)
+| JMH microbenchmark
+| 0.077ms
+| 4%
 |===
 
-**Total**: 0.510 + 0.313 + 1.087 = 1.91ms ✓
+**Total**: 0.510 + 0.313 + 1.01 + 0.077 = 1.91ms ✓
+
+The CDI producer overhead (1.01ms) includes `Instance<BearerTokenResult>.get()`, `InjectionPoint` inspection, `@Timed` instrumentation, and concurrency effects under 50 connections.
 
 === Why JWT is Slower than Health
 
-The **1.4ms difference** between JWT (1.91ms) and Health (0.510ms) is explained by two measured gaps:
+The **1.4ms difference** between JWT (1.91ms) and Health (0.510ms) breaks down into three components:
 
-[cols="2,2,2,3", options="header"]
+[cols="2,2,2", options="header"]
 |===
-| Gap | Measured Endpoints | Latency | What It Represents
+| Component | Latency | Share of 1.4ms
 
-| **Framework Overhead**
-| Health → Mock JWT
-| 0.313ms (22%)
-| POST vs GET, JAX-RS routing, Jackson serialization
+| Framework Overhead (POST, JAX-RS, Jackson)
+| 0.313ms
+| 22%
 
-| **CDI + JWT Validation**
-| Mock JWT → JWT
-| **1.087ms (78%)**
-| `Instance.get()`, producer chain, JWT library (77µs)
+| **CDI Producer Overhead**
+| **~1.01ms**
+| **72%**
+
+| JWT Library (parsing + RSA)
+| 0.077ms
+| 6%
 |===
 
-**Total**: 0.313ms + 1.087ms = **1.4ms** ✓
+**Total**: 0.313 + 1.01 + 0.077 = **1.4ms** ✓
 
 === Key Insight
 
-The **Mock JWT endpoint** (`/mock-jwt/validate`) replicates the full HTTP processing path but skips actual JWT validation. This directly measures the decomposition:
+The **Mock JWT endpoint** replicates the full HTTP path but skips `tokenValidator.createAccessToken()`. Combined with JMH microbenchmarks, this separates CDI overhead from JWT library cost:
 
-* **Health endpoint**: 0.510ms — baseline infrastructure
-* **Mock JWT endpoint**: 0.823ms — adds framework overhead (+0.313ms)
-* **JWT endpoint**: 1.91ms — adds CDI producer + validation (+1.087ms)
+* **Health → Mock JWT** (0.313ms): Framework overhead
+* **Mock JWT → JWT** (1.087ms): CDI producer + JWT library
+* **JMH benchmark** (0.077ms): JWT library in isolation
+* **CDI producer overhead**: 1.087ms − 0.077ms = **~1.01ms**
 
-Within the 1.087ms CDI + JWT gap:
+The CDI overhead includes:
 
-* JWT library (parsing + RSA signature): **77µs** (7%)
-* CDI producer overhead (`Instance.get()`, `@Timed`, concurrency): **~1.01ms** (93%)
+* `Instance<BearerTokenResult>.get()` proxy resolution
+* `InjectionPoint` metadata extraction for `@BearerToken` annotation
+* `@Timed` micrometer instrumentation
+* Concurrency effects (50 connections, cache contention)
 
-NOTE: The JWT library itself is fast (77µs). The dominant cost is CDI's `Instance<BearerTokenResult>` proxy resolution and producer invocation per request.
+NOTE: The JWT library (77µs) is only **6%** of the latency gap. The dominant cost (**72%**) is CDI producer overhead.
 
-See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition Analysis] for detailed methodology and ablation study.
+See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition Analysis] for detailed methodology.
 
 == JWT Library Performance (JMH Analysis)
 
