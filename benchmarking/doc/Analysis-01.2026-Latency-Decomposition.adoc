@@ -138,7 +138,7 @@ The ablation study decomposes the full JWT P50 latency (1.91ms) into measured la
 |0.2%
 |Mock JWT minus C (0.823 − 0.820)
 
-|**6. CDI producer chain + JWT validation**
+|**6. JWT validation**
 |1.087ms
 |56.9%
 |JWT minus Mock JWT (1.91 − 0.823)
@@ -156,7 +156,7 @@ The ablation study decomposes the full JWT P50 latency (1.91ms) into measured la
 
 **Authorization parsing is negligible.** The full header parsing pipeline — extracting the `authorization` key, checking the `Bearer ` prefix, substring extraction, and `HashMap` construction — costs only 0.003ms (3µs), effectively free.
 
-**CDI producer chain + JWT validation remains the dominant cost at 57%.** The 1.087ms gap between JWT and mock JWT (consistent with the previous measurement of 1.117ms) confirms that `Instance<BearerTokenResult>` proxy resolution, `@Timed` instrumentation, and concurrent JWT validation are the primary optimization targets.
+** JWT validation remains the dominant cost at 57%.** The 1.087ms gap between JWT and mock JWT (consistent with the previous measurement of 1.117ms) confirms that `Instance<BearerTokenResult>` proxy resolution, `@Timed` instrumentation, and concurrent JWT validation are the primary optimization targets.
 
 === Ablation Variant Descriptions
 

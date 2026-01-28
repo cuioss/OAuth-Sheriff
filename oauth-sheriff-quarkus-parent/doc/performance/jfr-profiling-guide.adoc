@@ -170,56 +170,55 @@ jfr print --events ExecutionSample jwt-profile.jfr | grep -i BigInteger | wc -l
 
 === CPU Hotspot Analysis
 
-**January 2026 JFR Findings** (48,027 execution samples):
+**January 2026 JFR Findings** (48,027 execution samples, top-of-stack):
 
-[cols="2,2,2", options="header"]
+[cols="2,1,1", options="header"]
 |===
-| Component | Stack Frames | Percentage
+| Component | Samples | Percentage
 
-| TLS Encryption (AES-GCM, SHA)
-| 43,055
-| **89.6%**
+| TLS Encryption (GHASH, AES, CounterMode)
+| 8,970
+| **18.7%**
 
-| Netty I/O
-| 39,952
-| 83.2%
+| Network I/O (Socket read/write)
+| 4,369
+| 9.1%
 
-| CDI Container
-| 30,070
-| 62.6%
+| JVM/GC Overhead
+| ~3,000
+| 6.3%
 
-| Vert.x Event Loop
-| 24,003
-| 50.0%
+| Vert.x/Netty Buffer Operations
+| 1,656
+| 3.5%
 
-| JOSE/JWT Processing
-| 787
-| 1.6%
+| CUI Sheriff OAuth Library
+| ~150
+| **0.3%**
 
 | BigInteger (RSA)
-| 501
-| **1.0%**
+| 46
+| **0.1%**
 |===
 
-NOTE: Percentages overlap due to nested stack frames.
+NOTE: These are "hot" methods at the top of the call stack during execution sampling.
 
 === Key Findings
 
-**BigInteger.modPow() is NOT a bottleneck**:
+**TLS encryption is the largest CPU consumer**:
 
-* Only 1% of CPU samples involve BigInteger operations
+* HTTPS encryption/decryption accounts for 18.7% of top-of-stack samples
+* This is transport security cost, present in any HTTPS application
+
+**RSA/BigInteger operations are minimal**:
+
+* Only 0.1% of CPU samples (46 of 48,027) involve BigInteger operations
 * RSA signature verification takes 68µs (JMH verified)
-* Historical claims of 230ms RSA overhead were incorrect
 
-**TLS dominates CPU usage**:
+**CUI Sheriff OAuth library overhead is minimal**:
 
-* HTTPS encryption/decryption accounts for 89.6% of samples
-* This is infrastructure cost, not JWT-specific
-
-**CDI overhead is significant**:
-
-* 62.6% of samples involve CDI container operations
-* `Instance.get()` calls in producer chain contribute to latency
+* Only 0.3% of CPU samples in CUI library code
+* Token validation overhead is dominated by I/O and TLS, not application logic
 
 == JFR Events Reference
 

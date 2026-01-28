@@ -5,173 +5,213 @@
 
 == Executive Summary
 
-JFR (Java Flight Recorder) profiling of the OAuth Sheriff integration tests reveals that **BigInteger.modPow() is NOT a significant CPU bottleneck**. The historical claim that RSA signature verification via BigInteger operations causes 230ms overhead is definitively incorrect.
+JFR (Java Flight Recorder) profiling of the OAuth Sheriff integration tests under load provides CPU hotspot analysis for the JWT validation endpoint.
 
-=== Key Findings
-
-[cols="1,3"]
-|===
-| Component | CPU Impact
-
-| TLS Encryption (AES-GCM, SHA) | **89.6%** of stack frames
-| Netty I/O | 83.2% of stack frames
-| CDI Container | 62.6% of stack frames
-| Vert.x Event Loop | 50.0% of stack frames
-| JWT Processing (JOSE/Nimbus) | 1.6% of stack frames
-| BigInteger (RSA signatures) | **1.0%** of stack frames
-|===
-
-NOTE: Percentages overlap because each sample contains multiple stack frames (e.g., a CDI call triggering TLS contains frames from both categories).
-
-== Profiling Configuration
-
-=== Environment
+=== Recording Configuration
 
 * **Platform**: Apple M4, 10 CPU cores
-* **GraalVM**: Mandrel jdk-25 native image
-* **Quarkus**: 3.27.2 (LTS)
-* **JFR Settings**: `profile` preset, 240s duration
+* **Runtime**: Mandrel jdk-25 native image
+* **Framework**: Quarkus 3.27.2 (LTS)
+* **JFR Settings**: `profile` preset, 240 seconds duration
 * **Load**: WRK benchmark with 50 concurrent connections
 
 === Recording Statistics
 
 [source]
 ----
-Version: 2.1
-Duration: 240 seconds
+Recording Duration: 240 seconds
 Total Execution Samples: 48,027
-Total Stack Frames Analyzed: ~200,000
+Unique Hot Methods: 3,181
 ----
 
 == CPU Hotspot Analysis
 
-=== BigInteger.modPow() - The Historical "Bottleneck"
+The following table shows methods at the **top of the call stack** when execution samples were taken. These are the methods actively consuming CPU.
 
-Previous documentation suggested BigInteger.modPow() was responsible for 230ms overhead in RSA signature verification. JFR profiling reveals this is incorrect.
+=== Top 15 Hot Methods
 
-[cols="2,1,2"]
+[cols="1,3,1,1", options="header"]
 |===
-| Method | Samples | Percentage
+| Rank | Method | Samples | %
 
-| `BigInteger.montgomerySquare()` | 34 | 0.07%
-| `BigInteger.oddModPow()` | 32 | 0.07%
-| `BigInteger.implMontgomerySquare()` | 31 | 0.06%
-| `BigInteger.montReduce()` | 33 | 0.07%
-| `BigInteger.addOne()` | 13 | 0.03%
-| **Total BigInteger** | **501** | **~1.0%**
+| 1 | `GHASH.blockMult()` | 5,126 | 10.68%
+| 2 | `AESCrypt.implEncryptBlock()` | 2,871 | 5.98%
+| 3 | `FileOutputStream.writeBytes()` | 1,337 | 2.78%
+| 4 | `SocketDispatcher.write0()` | 1,298 | 2.70%
+| 5 | `CounterMode.implCrypt()` | 973 | 2.03%
+| 6 | `PlatformDependent.getByte()` | 927 | 1.93%
+| 7 | `CodeInfoDecoder.lookupCodeInfo()` | 906 | 1.89%
+| 8 | `JfrOldObjectSampler.scavenge()` | 840 | 1.75%
+| 9 | `Pthread.pthread_cond_timedwait()` | 839 | 1.75%
+| 10 | `EPoll.wait()` | 814 | 1.70%
+| 11 | `JavaMonitor.tryRelease()` | 545 | 1.14%
+| 12 | `EventFD.set0()` | 461 | 0.96%
+| 13 | `SocketDispatcher.read0()` | 460 | 0.96%
+| 14 | `StringLatin1.charAt()` | 434 | 0.90%
+| 15 | `UnmanagedMemoryUtil.copyLongsForward()` | 434 | 0.90%
 |===
 
-At 1% of CPU samples, BigInteger operations are negligible. This aligns with JMH data showing RSA verification at 68µs - already optimal.
+=== Categorized CPU Usage
 
-=== TLS/HTTPS Encryption - The Actual Dominant Factor
+[cols="2,1,1,3", options="header"]
+|===
+| Category | Samples | % | Components
 
-HTTPS encryption/decryption consumes the majority of CPU time:
+| TLS/Crypto
+| 8,970
+| 18.7%
+| GHASH (5,126), AES (2,871), CounterMode (973)
 
-[cols="2,1"]
+| Network I/O
+| 4,369
+| 9.1%
+| FileOutputStream (1,337), SocketDispatcher write (1,298), read (460), EPoll (814), EventFD (461)
+
+| JVM Runtime (SubstrateVM)
+| ~4,500
+| 9.4%
+| CodeInfoDecoder, JFR sampling, GC, monitors, memory ops
+
+| Netty Buffers
+| ~1,500
+| 3.1%
+| PlatformDependent, ByteBuf operations
+
+| Quarkus/Arc Framework
+| ~600
+| 1.3%
+| VertxLocalsHelper, RequestHandler, ContextInstances
+
+| Vert.x HTTP
+| ~500
+| 1.0%
+| HttpUtils, header validation
+
+| CUI Sheriff OAuth
+| ~160
+| 0.3%
+| See detailed breakdown below
+
+| BigInteger (RSA)
+| 46
+| 0.1%
+| addOne (31), mulsub (5), montReduce (3), other (7)
+|===
+
+== CUI Sheriff OAuth Library Analysis
+
+Methods from `de.cuioss.sheriff.oauth` at top of call stack:
+
+[cols="3,1", options="header"]
 |===
 | Method | Samples
 
-| `GHASH.processBlocks()` (GCM authentication) | 17+
-| `SHA2.implCompress0()` | 17
-| `CounterMode.crypt()` | 14
-| `AESCrypt.implEncryptBlock()` | 11
-| **Total TLS-related** | **43,055 (89.6%)**
+| `TokenContent.getClaimOption()` | 9
+| `CustomAccessLogFilter.filter()` (proxy) | 8
+| `VertxHttpServletRequestAdapter.getHeaders()` | 7
+| `LogRecordModel.format()` | 7
+| `CustomAccessLogFilter.filter()` | 6
+| `ClientIpExtractor.extractFromHeader()` | 5
+| `CustomAccessLogFilter.formatLogEntry()` | 5
+| `BearerTokenProducer.getBearerTokenResult()` | 4
+| `AccessTokenContent.getScopes()` | 4
+| `CollectionClaimHandler.providesValues()` | 4
+| Other methods (41 unique) | ~100
+| **Total** | **~160**
 |===
 
-This overhead is unavoidable with HTTPS and is not specific to JWT validation. It represents the cost of securing all HTTP traffic, not token verification.
+Key observations:
 
-=== CDI Container Overhead
+* **Logging dominates**: `CustomAccessLogFilter` and logging utilities account for ~50% of CUI library samples
+* **Token validation minimal**: `TokenValidator.createAccessToken()` appears only 1 time
+* **Token content access**: `TokenContent.getClaimOption()` at 9 samples is the most frequent token operation
 
-CDI dependency injection (via Quarkus Arc) accounts for significant overhead:
+== BigInteger / RSA Analysis
 
-* **30,070 stack frames** (62.6%) involve Arc/Instance/Context
-* This includes `Instance.get()` calls in the producer chain
-* Overhead is per-request due to `@Dependent` scoped producers
+RSA signature verification uses BigInteger for modular exponentiation:
 
-This finding supports the latency decomposition analysis showing 1.087ms in CDI producer chains.
+[cols="2,1,1", options="header"]
+|===
+| Method | Samples | %
 
-=== Network I/O (Netty/Vert.x)
+| `BigInteger.addOne()` | 31 | 0.065%
+| `MutableBigInteger.mulsub()` | 5 | 0.010%
+| `BigInteger.implMulAddCheck()` | 4 | 0.008%
+| `BigInteger.montReduce()` | 3 | 0.006%
+| `MutableBigInteger.divideMagnitude()` | 1 | 0.002%
+| `BigInteger.subN()` | 1 | 0.002%
+| `BigInteger.implMontgomerySquare()` | 1 | 0.002%
+| **Total** | **46** | **0.096%**
+|===
 
-* **Netty**: 39,952 frames (83.2%) - network buffer management
-* **Vert.x**: 24,003 frames (50.0%) - event loop and thread scheduling
+At 46 samples out of 48,027 (0.1%), BigInteger operations represent minimal CPU usage.
 
-These are infrastructure costs inherent to any Quarkus HTTP application.
+== TLS/HTTPS Encryption
 
-== Verdict on Historical Claims
+TLS encryption for HTTPS is the largest single CPU consumer:
 
-=== Claim: "BigInteger.modPow() causes 230ms RSA overhead"
+[cols="2,1,1,2", options="header"]
+|===
+| Method | Samples | % | Purpose
 
-**Status: INCORRECT**
+| `GHASH.blockMult()` | 5,126 | 10.68% | GCM authentication tag
+| `AESCrypt.implEncryptBlock()` | 2,871 | 5.98% | AES block encryption
+| `CounterMode.implCrypt()` | 973 | 2.03% | CTR mode processing
+| **Total** | **8,970** | **18.7%** |
+|===
 
-* JFR shows BigInteger at 1% of CPU time
-* JMH benchmarks show RSA at 68µs total
-* The 230ms figure was from a broken benchmark setup
+This is the cost of HTTPS transport security, not specific to JWT validation.
 
-=== Claim: "Algorithm migration to ECDSA would provide 10-50x improvement"
+== Thread Activity
 
-**Status: MISLEADING**
+Threads observed in execution samples:
 
-* RSA at 68µs is already fast
-* ECDSA would save ~50µs per request
-* With 2ms P50 latency, this represents only 2.5% improvement
-* Migration benefit is marginal, not transformational
+* `vert.x-eventloop-thread-*` - HTTP request handling
+* `vert.x-internal-blocking-*` - Blocking operations
+* `executor-thread-*` - Worker pool
+* `JFR recorder` / `JFR Periodic Tasks` - Profiling overhead
+* `HttpClient-*-SelectorManager` - Outbound HTTP (Keycloak JWKS)
 
-== Recommendations
+== JFR Analysis Commands
 
-=== No Urgent Optimization Needed
+Commands used to extract this data:
 
-Current performance is excellent:
-* **16,700 requests/second** sustained throughput
-* **2.0ms P50 latency** under load
-* **RSA verification: 68µs** (already optimized)
+[source,bash]
+----
+# Recording summary
+jfr summary jwt-profile.jfr
 
-=== Future Profiling Focus Areas
+# Top hot methods (top of stack)
+jfr print --events ExecutionSample jwt-profile.jfr | \
+  grep -A1 "stackTrace = \[" | grep -v "stackTrace" | \
+  sed 's/^[[:space:]]*//' | sort | uniq -c | sort -rn | head -50
 
-If optimization is needed, focus on:
+# BigInteger samples
+jfr print --events ExecutionSample jwt-profile.jfr | \
+  grep -A1 "stackTrace = \[" | grep "BigInteger" | sort | uniq -c
 
-1. **CDI Producer Chain** - Consider caching `BearerTokenResult` or using `@RequestScoped`
-2. **TLS Session Resumption** - Verify session cache is effective
-3. **Connection Pooling** - Optimize Netty buffer allocation
+# CUI library samples
+jfr print --events ExecutionSample jwt-profile.jfr | \
+  grep -A1 "stackTrace = \[" | grep "de.cuioss" | sort | uniq -c | sort -rn
+----
 
-=== JFR for Production Monitoring
+== Container Configuration
 
-GraalVM 25 native images support JFR natively:
-* Use `-XX:StartFlightRecording` for continuous monitoring
-* Container volume required for JFR output with read-only filesystem
-* Profile preset provides good balance of detail vs overhead
-
-== Technical Details
-
-=== JFR Container Configuration
-
-The JFR Dockerfile requires a volume mount for output due to the read-only filesystem security setting:
+JFR output requires a volume mount due to read-only container filesystem:
 
 [source,yaml]
 ----
 # docker-compose.jfr.yml
 services:
   oauth-sheriff-integration-tests:
+    image: "oauth-sheriff-integration-tests:jfr"
     volumes:
       - ./target/jfr-output:/tmp/jfr-output:rw
 ----
 
-=== JFR Analysis Commands
-
-[source,bash]
-----
-# Summary
-jfr summary jwt-profile.jfr
-
-# Execution hotspots
-jfr print --events ExecutionSample jwt-profile.jfr | grep -i BigInteger | wc -l
-
-# Category breakdown
-jfr print --events ExecutionSample jwt-profile.jfr | grep -iE "SHA|AES|GCM" | wc -l
-----
-
 == Related Documents
 
-* link:Analysis-01.2026-Integration.adoc[Integration Benchmark Analysis] - Throughput measurements
-* link:Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition] - Where the 2ms goes
+* link:Analysis-01.2026-Integration.adoc[Integration Benchmark Analysis] - Throughput and latency measurements
+* link:Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition] - Ablation study results
 * link:Analysis-01.2026-Micro.adoc[Microbenchmark Analysis] - JMH component-level timings
 * link:../oauth-sheriff-quarkus-parent/doc/performance/jfr-profiling-guide.adoc[JFR Profiling Guide] - Setup instructions

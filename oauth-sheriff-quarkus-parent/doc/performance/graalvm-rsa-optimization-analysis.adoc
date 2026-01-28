@@ -9,36 +9,15 @@
 
 **Analysis Date**: January 2026 +
 **Context**: JWT validation performance in GraalVM native images +
-**Primary Finding**: RSA signature verification performs excellently at 68µs - no optimization needed
+**Primary Finding**: RSA signature verification performs excellently at 68µs
 
 === Key Findings
 
 * **RSA Performance**: 68µs per signature verification (JMH measured)
-* **CPU Impact**: BigInteger.modPow() accounts for only 1% of CPU samples (JFR verified)
-* **Historical Correction**: Previous claims of 230ms RSA overhead were based on incorrect benchmarks
-* **Recommendation**: No algorithm migration urgently needed - RSA performance is excellent
+* **CPU Impact**: BigInteger.modPow() accounts for 0.1% of CPU samples (JFR verified)
+* **Total JWT Processing**: 77µs library time, 1.91ms integration endpoint P50
 
-== Historical Context
-
-=== July 2025 Investigation
-
-Previous documentation reported:
-
-* Total JWT Validation: 265.9ms P95
-* RSA Signature Verification: ~230ms (claimed 97% of overhead)
-* BigInteger.modPow() identified as primary bottleneck
-
-=== January 2026 Verification
-
-JMH microbenchmarks and JFR profiling reveal:
-
-* Total JWT Library Processing: 77µs
-* RSA Signature Verification: 68µs (88% of library time)
-* Integration endpoint latency: 1.91ms P50
-
-**Root Cause of Discrepancy**: The July 2025 benchmarks had flawed methodology - likely measuring cold start, excessive object allocation, or broken test infrastructure rather than steady-state RSA performance.
-
-== Current RSA Performance
+== RSA Performance
 
 === JMH Benchmark Results
 
@@ -61,38 +40,38 @@ JMH microbenchmarks and JFR profiling reveal:
 
 === JFR CPU Profiling
 
-JFR analysis of 48,027 execution samples under load:
+JFR analysis of 48,027 execution samples under load (top-of-stack, actual hot methods):
 
-[cols="2,2,2", options="header"]
+[cols="2,1,1", options="header"]
 |===
-| Component | Stack Frames | Percentage
+| Component | Samples | Percentage
 
-| TLS Encryption (AES-GCM, SHA)
-| 43,055
-| **89.6%**
+| TLS Encryption (GHASH, AES, CounterMode)
+| 8,970
+| **18.7%**
 
-| Netty I/O
-| 39,952
-| 83.2%
+| Network I/O (Socket read/write)
+| 4,369
+| 9.1%
 
-| CDI Container
-| 30,070
-| 62.6%
+| JVM/GC Overhead
+| ~3,000
+| 6.3%
 
-| Vert.x Event Loop
-| 24,003
-| 50.0%
+| Vert.x/Netty Buffer Operations
+| 1,656
+| 3.5%
 
-| JOSE/JWT Processing
-| 787
-| 1.6%
+| CUI Sheriff OAuth Library
+| ~150
+| **0.3%**
 
 | BigInteger (RSA)
-| 501
-| **1.0%**
+| 46
+| **0.1%**
 |===
 
-NOTE: Percentages overlap due to nested stack frames. The key insight: **BigInteger operations are negligible (1%)** while **TLS encryption dominates (89.6%)**.
+NOTE: These are "hot" methods at the top of the call stack during execution sampling.
 
 == GraalVM Native Image Characteristics
 
@@ -106,10 +85,8 @@ Native images trade JIT optimization for startup speed and memory efficiency:
 
 === Cryptographic Performance in Native Images
 
-Contrary to earlier assumptions:
-
-* BigInteger operations are NOT significantly degraded in native images
-* The default JDK RSA provider performs well at 68µs
+* BigInteger operations perform well in native images
+* The default JDK RSA provider achieves 68µs verification
 * Native image cryptographic performance is production-ready
 
 === GraalVM 25 / Mandrel jdk-25 Improvements
@@ -121,7 +98,7 @@ Contrary to earlier assumptions:
 
 == Algorithm Comparison
 
-=== JOSE Algorithm Performance Characteristics
+=== JWT Signature Algorithm Performance Characteristics
 
 [cols="2,2,2,3", options="header"]
 |===
@@ -220,9 +197,9 @@ jcmd <pid> JFR.dump filename=profile.jfr
 
 === Key Metrics to Monitor
 
-* RSA verification time (should remain ~68µs)
-* BigInteger CPU percentage (should remain ~1%)
-* TLS overhead (expected to dominate at 80-90%)
+* RSA verification time (~68µs baseline)
+* BigInteger CPU percentage (~0.1% of samples)
+* TLS overhead (~18.7% of active CPU)
 
 == Related Documents
 
