@@ -442,7 +442,7 @@ public class JwtValidationEndpoint {
     }
 
     public record ValidationResponse(boolean valid, String message, Map<String, Object> data) {
-        // Convenience constructor for backwards compatibility
+        // Convenience constructor with default empty data
         public ValidationResponse(boolean valid, String message) {
             this(valid, message, Collections.emptyMap());
         }
