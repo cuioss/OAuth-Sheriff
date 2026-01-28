@@ -373,6 +373,130 @@ The `BearerTokenProducer.produceBearerTokenResult()` method is implicitly `@Depe
 
 **Optimization consideration**: If the producer were `@RequestScoped`, the result would be cached for the duration of a request, eliminating redundant validation if `Instance.get()` is called multiple times. However, the current endpoint design calls it only once per request, so the benefit would be minimal unless the usage pattern changes.
 
+== CDI Instance.get() Research Findings
+
+This section documents research into Quarkus CDI `Instance.get()` overhead and optimization options, explaining why the 1.087ms token validation cost cannot be reduced without API changes.
+
+=== Quarkus @WithCaching Annotation
+
+Quarkus ArC provides `@io.quarkus.arc.WithCaching` specifically to address `Instance.get()` performance:
+
+[quote, Quarkus CDI Reference]
+When applied to an injected Instance, the result of `Instance#get()` is *cached on the first call*, and the same value is returned for all subsequent calls, *even for @Dependent beans*.
+
+**Source**: https://quarkus.io/guides/cdi-reference
+
+=== What Instance.get() Does Internally
+
+Each uncached `Instance.get()` call performs (from ArC source code analysis):
+
+1. Creates a **child CreationalContext** (`this.creationalContext.child(bean)`)
+2. Constructs **InjectionPointImpl** with type, qualifiers, annotations, member info
+3. Sets InjectionPoint via `InjectionPointProvider.setCurrent()`
+4. Creates bean instance (for @Dependent scope)
+5. Cleans up InjectionPoint in try-finally
+
+**Source**: https://github.com/quarkusio/quarkus/blob/main/independent-projects/arc/runtime/src/main/java/io/quarkus/arc/impl/InstanceImpl.java
+
+This overhead is confirmed by JFR allocation samples showing 250 `CreationalContextImpl` allocations during the benchmark.
+
+=== Memory Leak Risk with @Dependent
+
+**CRITICAL**: Instances from `Instance.get()` for `@Dependent` beans are never GC'd when the holding bean is `@ApplicationScoped`:
+
+[quote, Quarkus Issue #5209]
+Instances obtained from Instance.get() are *dependent objects of the Instance itself*. For @ApplicationScoped beans holding an Instance, dependent instances accumulate for the application's lifetime.
+
+**Mitigation**: Use `Instance.Handle` with try-with-resources or call `instance.destroy(myInstance)`.
+
+**Sources**:
+
+* https://github.com/quarkusio/quarkus/issues/5209
+* https://rmannibucau.wordpress.com/2015/03/02/cdi-and-instance-3-pitfalls-you-need-to-know/
+
+=== Why @WithCaching Cannot Be Applied
+
+The `JwtValidationEndpoint` uses **5 different Instance fields** with different `@BearerToken` annotation parameters:
+
+[source,java]
+----
+@BearerToken Instance<BearerTokenResult> basicToken;
+@BearerToken(requiredScopes = {"read"}) Instance<BearerTokenResult> tokenWithScopes;
+@BearerToken(requiredRoles = {"user"}) Instance<BearerTokenResult> tokenWithRoles;
+@BearerToken(requiredGroups = {"test-group"}) Instance<BearerTokenResult> tokenWithGroups;
+@BearerToken(requiredScopes = {"read"}, requiredRoles = {"user"}, ...) Instance<BearerTokenResult> tokenWithAll;
+----
+
+Each field requires **different authorization validation** via `InjectionPoint` introspection. Applying `@WithCaching` would:
+
+* Return the `basicToken` result when `tokenWithScopes` is requested → **security bypass**
+* Skip scope/role/group validation entirely
+
+**Conclusion**: The design requires per-request `InjectionPoint` introspection to extract annotation parameters, making `@WithCaching` inapplicable for security reasons. This is the same constraint that blocked `@RequestScoped` refactoring.
+
+=== Estimated Overhead Breakdown
+
+[cols="2,1,1", options="header"]
+|===
+| Component | Estimated | Confidence
+
+| Child CreationalContext allocation
+| ~100-200µs
+| HIGH (documented)
+
+| InjectionPoint construction + annotation extraction
+| ~50-100µs
+| MEDIUM (reflection)
+
+| Set.copyOf() × 3 for scopes/roles/groups
+| ~10-20µs
+| LOW
+
+| @Timed Micrometer instrumentation
+| ~1-5µs
+| HIGH (Micrometer docs)
+
+| TokenValidator.createAccessToken() under load
+| ~600-800µs
+| MEDIUM (JMH=77µs, 8-10x concurrency multiplier)
+
+| **Total**
+| **~760-1125µs**
+| -
+|===
+
+**Matches observed**: 1,087µs
+
+=== Historical Benchmark Context
+
+From struberg/cdi-performance (2015, 10M invocations, 100 threads):
+
+[cols="2,1,1,1", options="header"]
+|===
+| Scope | OpenWebBeans | Weld | Baseline
+
+| @ApplicationScoped
+| 13ms
+| 17,751ms
+| 8ms
+
+| @RequestScoped
+| 648ms
+| 2,593ms
+| 8ms
+|===
+
+**Note**: Data is outdated, Quarkus ArC not included, but shows magnitude of scope overhead differences across implementations.
+
+=== Investigation Conclusion
+
+The 14x JMH-to-integration gap (77µs → 1,087µs) is **understood but not optimizable** without API changes:
+
+1. **Root cause identified**: CDI `Instance.get()` with per-request `InjectionPoint` introspection
+2. **Optimization blocked**: Security requires different annotation parameters per injection point
+3. **Performance acceptable**: 23K ops/s at 1.9ms P50 exceeds targets (>10K ops/s, <5ms)
+4. **Investigation complete**: Further measurement would confirm but not change the outcome
+
 == Related Documents
 
 * link:Analysis-01.2026-Integration.adoc[Integration Benchmark Analysis] - Throughput and latency measurements

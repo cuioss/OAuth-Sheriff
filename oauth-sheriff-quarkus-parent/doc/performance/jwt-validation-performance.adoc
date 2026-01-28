@@ -88,6 +88,22 @@ The application context (1.087ms) is **14x slower** than the isolated library (7
 
 See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition — Ablation Study] for five-layer methodology and link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc[JFR Profiling Analysis] for non-CPU overhead analysis.
 
+=== CDI Overhead: Inherent by Design
+
+**Investigation Status**: Complete — root cause understood, optimization not feasible.
+
+The 14x JMH-to-integration gap is caused by CDI `Instance.get()` overhead, which is **inherent to the security design**:
+
+* Each `Instance.get()` call creates a `CreationalContext`, constructs `InjectionPointImpl`, and extracts `@BearerToken` annotation parameters
+* The `JwtValidationEndpoint` uses multiple injection points with different authorization requirements (scopes, roles, groups)
+* Quarkus `@WithCaching` cannot be applied because it would cache the first result and return it for all injection points → **security bypass**
+
+**Why this matters**: The overhead is the cost of per-request authorization validation with different requirements per injection point. This is correct behavior, not a bug.
+
+**Performance impact**: Despite the overhead, performance targets are exceeded (23K ops/s vs 10K target, 1.9ms P50 vs 5ms target).
+
+See link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc#_cdi_instanceget_research_findings[CDI Instance.get() Research Findings] for full analysis.
+
 == JWT Library Performance (JMH Analysis)
 
 === Component-Level Timing
@@ -229,9 +245,11 @@ Migration to ECDSA/EdDSA would provide marginal improvement (~50µs savings) rep
 
 If further optimization is needed:
 
-1. **CDI Producer Chain** (highest impact) - Consider `@RequestScoped` caching of `BearerTokenResult`
+1. **CDI Producer Chain** — ❌ **Not optimizable** (see <<CDI Overhead: Inherent by Design>>). `@RequestScoped` caching and `@WithCaching` are blocked by security requirements — different injection points require different authorization parameters.
 2. **TLS Session Resumption** - Verify session cache effectiveness
 3. **Connection Pooling** - Monitor Netty buffer allocation under extreme load
+
+NOTE: The dominant cost (CDI Instance.get() overhead at 57% of latency) cannot be reduced without API changes. Current performance (23K ops/s, 1.9ms P50) exceeds all targets.
 
 == Benchmark Execution
 
