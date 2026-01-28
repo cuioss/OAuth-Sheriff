@@ -268,7 +268,7 @@ The JwksLoader implementations use an async-first architecture internally, power
 * **Thread-Safe**: Lock-free implementation using `AtomicReference` for status tracking and content management
 * **Background Refresh**: Automatic background refresh of JWKS content with configurable intervals
 
-**Important**: While the internal implementation is async-first, the public-facing TokenValidator API remains synchronous. The async operations are resolved internally using `.join()` to maintain backward compatibility.
+**Important**: While the internal implementation is async-first, the public-facing TokenValidator API remains synchronous. The async operations are resolved internally using `.join()` to provide a simple, blocking API for common use cases.
 
 ==== Core Methods
 
@@ -370,7 +370,7 @@ HttpAdapter<Jwks> adapter = ResilientHttpAdapter.wrap(base, retryConfig);
 * ETag caching can be independently configured
 * Retry behavior can be customized via `RetryConfig`
 
-**Backward Compatibility:**
+**Synchronous API Design:**
 Public API methods remain synchronous by calling `.join()` on the `CompletableFuture` returned by `adapter.get()`:
 [source,java]
 ----

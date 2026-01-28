@@ -60,7 +60,7 @@ import java.util.*;
  * The token is created and signed using the Jwts library when getRawToken() is called.
  * <p>
  * The keyId and signingAlgorithm are generated using Generators.fixedValues() with a defined list.
- * For compatibility with existing tests, RS256 is used as the algorithm and the default key ID is used.
+ * Uses RS256 as the default test algorithm and the default key ID.
  */
 public class TestTokenHolder implements TokenContent {
 
@@ -92,14 +92,14 @@ public class TestTokenHolder implements TokenContent {
 
     /**
      * Generator for signing algorithms.
-     * For compatibility with existing tests, this always returns RS256.
+     * Uses RS256 as the default test algorithm.
      */
     private static final TypedGenerator<InMemoryKeyMaterialHandler.Algorithm> ALGORITHM_GENERATOR =
             Generators.fixedValues(InMemoryKeyMaterialHandler.Algorithm.RS256);
 
     /**
      * Generator for key IDs using a fixed list.
-     * For compatibility with existing tests, the default key ID is the only value.
+     * Uses the default key ID for test consistency.
      */
     private static final TypedGenerator<String> KEY_ID_GENERATOR =
             Generators.fixedValues(InMemoryKeyMaterialHandler.DEFAULT_KEY_ID);
@@ -119,7 +119,7 @@ public class TestTokenHolder implements TokenContent {
     /**
      * Constructor for creating a token holder with specific claim control parameters.
      * The keyId and signingAlgorithm are generated using Generators.fixedValues() with a defined list.
-     * For compatibility with existing tests, RS256 is used as the algorithm and the default key ID is used.
+     * Uses RS256 as the default test algorithm and the default key ID.
      *
      * @param tokenType    the type of token to generate
      * @param claimControl the parameter object controlling which claims should be included or excluded

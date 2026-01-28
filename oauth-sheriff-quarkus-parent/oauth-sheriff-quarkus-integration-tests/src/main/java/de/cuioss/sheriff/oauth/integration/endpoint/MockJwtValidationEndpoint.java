@@ -1,0 +1,188 @@
+/*
+ * Copyright © 2025 CUI-OpenSource-Software (info@cuioss.de)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package de.cuioss.sheriff.oauth.integration.endpoint;
+
+import de.cuioss.sheriff.oauth.core.TokenValidator;
+import de.cuioss.sheriff.oauth.integration.endpoint.JwtValidationEndpoint.ValidationResponse;
+import de.cuioss.sheriff.oauth.quarkus.annotation.ServletObjectsResolver;
+import de.cuioss.sheriff.oauth.quarkus.servlet.HttpServletRequestResolver;
+import de.cuioss.tools.logging.CuiLogger;
+import io.quarkus.runtime.annotations.RegisterForReflection;
+import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Mock JWT validation endpoint for performance decomposition benchmarking.
+ * <p>
+ * Replicates the full processing path of {@link JwtValidationEndpoint} — same CDI
+ * wiring, HTTP header extraction, and JSON response serialization — but skips the
+ * actual JWT library validation ({@code tokenValidator.createAccessToken()}).
+ * <p>
+ * This isolates the JWT integration-specific overhead (CDI producers, header
+ * extraction, claims map construction, JSON serialization) from the library
+ * validation cost (77µs measured by JMH).
+ *
+ * @see JwtValidationEndpoint
+ */
+@Path("/mock-jwt")
+@Produces(MediaType.APPLICATION_JSON)
+@ApplicationScoped
+@RegisterForReflection
+@RunOnVirtualThread
+public class MockJwtValidationEndpoint {
+
+    private static final CuiLogger LOGGER = new CuiLogger(MockJwtValidationEndpoint.class);
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    // Hardcoded claims matching the benchmark-user token structure
+    private static final String MOCK_SUBJECT = "benchmark-user";
+    private static final Set<String> MOCK_SCOPES = Set.of("read");
+    private static final Set<String> MOCK_ROLES = Set.of("user");
+    private static final Set<String> MOCK_GROUPS = Set.of("test-group");
+    private static final String MOCK_EMAIL = "benchmark@test.com";
+
+    // Pre-built response — avoids per-request HashMap allocation for ablation variants
+    private static final ValidationResponse PREBUILT_RESPONSE =
+            new ValidationResponse(true, "Ablation baseline (no per-request processing)",
+                    Map.of("subject", MOCK_SUBJECT, "scopes", MOCK_SCOPES,
+                            "roles", MOCK_ROLES, "groups", MOCK_GROUPS, "email", MOCK_EMAIL));
+
+    // Injected to replicate CDI wiring cost — same beans as BearerTokenProducer
+    private final TokenValidator tokenValidator;
+    private final HttpServletRequestResolver servletObjectsResolver;
+
+    @Inject
+    public MockJwtValidationEndpoint(
+            TokenValidator tokenValidator,
+            @ServletObjectsResolver(ServletObjectsResolver.Variant.VERTX) HttpServletRequestResolver servletObjectsResolver) {
+        this.tokenValidator = tokenValidator;
+        this.servletObjectsResolver = servletObjectsResolver;
+        LOGGER.debug("MockJwtValidationEndpoint initialized with TokenValidator and HttpServletRequestResolver");
+    }
+
+    /**
+     * Mock JWT validation endpoint that mirrors {@code /jwt/validate} processing
+     * but skips {@code tokenValidator.createAccessToken()}.
+     * <p>
+     * Processing flow:
+     * <ol>
+     *   <li>Resolve HTTP header map via {@code HttpServletRequestResolver}</li>
+     *   <li>Extract Authorization header, parse Bearer prefix</li>
+     *   <li>Skip JWT library validation</li>
+     *   <li>Build same response structure with hardcoded claims</li>
+     * </ol>
+     *
+     * @return Validation result with hardcoded claims or 401 if no Bearer token
+     */
+    @POST
+    @Path("/validate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response validateToken() {
+        // Step 1: Resolve header map — same as BearerTokenProducer.extractBearerTokenFromHeaderMap()
+        Map<String, List<String>> headerMap = servletObjectsResolver.resolveHeaderMap();
+
+        // Step 2: Extract Authorization header (lowercase per RFC 9113/7230)
+        List<String> authHeaders = headerMap.get("authorization");
+        if (authHeaders == null || authHeaders.isEmpty()) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(new ValidationResponse(false, "Bearer token missing"))
+                    .build();
+        }
+
+        String authHeader = authHeaders.getFirst();
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(new ValidationResponse(false, "Not a Bearer token"))
+                    .build();
+        }
+
+        String bearerToken = authHeader.substring(BEARER_PREFIX.length());
+        if (bearerToken.trim().isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ValidationResponse(false, "Bearer token is empty"))
+                    .build();
+        }
+
+        // Step 3: SKIP tokenValidator.createAccessToken(bearerToken)
+        // The token string has been extracted but is not validated
+
+        // Step 4: Build same response structure as JwtValidationEndpoint.createTokenResponse()
+        var data = new HashMap<String, Object>();
+        data.put("subject", MOCK_SUBJECT);
+        data.put("scopes", MOCK_SCOPES);
+        data.put("roles", MOCK_ROLES);
+        data.put("groups", MOCK_GROUPS);
+        data.put("email", MOCK_EMAIL);
+
+        return Response.ok(new ValidationResponse(true, "Mock validation (no JWT library call)", data)).build();
+    }
+
+    /**
+     * Ablation variant B: JAX-RS baseline with CDI-injected class.
+     * <p>
+     * Returns a pre-built response without any per-request processing.
+     * No header access, no config access, no HashMap construction.
+     * <p>
+     * Compared to variant A ({@link BareBaselineEndpoint}), this confirms that
+     * {@code @ApplicationScoped} constructor injection has zero per-request cost.
+     *
+     * @return Pre-built validation response
+     */
+    @POST
+    @Path("/baseline")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response baseline() {
+        // resolveHeaderMap() — not called (no servlet object access)
+        // header parsing — not called (no header access)
+        // HashMap construction — not called (pre-built response)
+        return Response.ok(PREBUILT_RESPONSE).build();
+    }
+
+    /**
+     * Ablation variant C: Header resolution only.
+     * <p>
+     * Calls {@code resolveHeaderMap()} to measure Vert.x context resolution cost,
+     * but does not parse the Authorization header or construct a HashMap.
+     * Returns a pre-built response.
+     * <p>
+     * The cost difference between this and {@link #baseline()} isolates the
+     * Vert.x context resolution overhead.
+     *
+     * @return Pre-built validation response
+     */
+    @POST
+    @Path("/header-only")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response headerOnly() {
+        // Step 1: Resolve header map — KEPT (measures Vert.x context access cost)
+        servletObjectsResolver.resolveHeaderMap();
+        // Authorization parsing — not called
+        // HashMap construction — not called (pre-built response)
+        return Response.ok(PREBUILT_RESPONSE).build();
+    }
+}

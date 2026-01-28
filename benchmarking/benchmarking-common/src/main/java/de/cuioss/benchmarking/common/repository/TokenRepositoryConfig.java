@@ -132,15 +132,8 @@ public class TokenRepositoryConfig {
      * @throws IllegalArgumentException if any required property is missing
      */
     public static TokenRepositoryConfig fromProperties() {
-        // Check both token.keycloak.url and keycloak.url for compatibility
-        // Prefer token.keycloak.url if both are set
-        String keycloakUrl = System.getProperty(Properties.KEYCLOAK_URL);
-        if (keycloakUrl == null) {
-            keycloakUrl = System.getProperty("keycloak.url");
-        }
-
         return TokenRepositoryConfig.builder()
-                .keycloakBaseUrl(requireProperty(keycloakUrl, "Keycloak URL", Properties.KEYCLOAK_URL + " or keycloak.url"))
+                .keycloakBaseUrl(requireProperty(System.getProperty(Properties.KEYCLOAK_URL), "Keycloak URL", Properties.KEYCLOAK_URL))
                 .realm(requireProperty(System.getProperty(Properties.REALM), "Keycloak realm", Properties.REALM))
                 .clientId(requireProperty(System.getProperty(Properties.CLIENT_ID), "Client ID", Properties.CLIENT_ID))
                 .clientSecret(requireProperty(System.getProperty(Properties.CLIENT_SECRET), "Client secret", Properties.CLIENT_SECRET))

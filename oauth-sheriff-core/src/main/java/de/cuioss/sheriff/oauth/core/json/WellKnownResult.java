@@ -92,7 +92,6 @@ public class WellKnownResult {
             null
     );
 
-    // Getters for compatibility
     public String issuer() {
         return issuer;
     }

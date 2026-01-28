@@ -149,9 +149,6 @@ Executes JMH-based micro-benchmarks directly against the JWT validation library 
 
 |Support Classes
 |`BenchmarkKeyCache`, `MockTokenRepository`, `LibraryMetricsExporter`
-
-|Legacy Benchmarks
-|`ErrorLoadBenchmark`, `PerformanceIndicatorBenchmark`
 |===
 
 === Maven Profiles

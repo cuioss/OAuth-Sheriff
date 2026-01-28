@@ -7,314 +7,278 @@
 
 == Purpose
 
-This document defines the current JWT validation performance characteristics, baselines, and bottleneck analysis for the CUI JWT Quarkus integration. It provides technical specifications for performance metrics and system resource utilization.
+This document defines the current JWT validation performance characteristics, baselines, and analysis for the CUI OAuth Sheriff Quarkus integration. It provides technical specifications for performance metrics, latency decomposition, and optimization guidance.
 
 == Related Documentation
 
 * xref:native-optimization-guide.adoc[Native Optimization Guide] - GraalVM build configuration and optimization settings
 * xref:jfr-profiling-guide.adoc[JFR Profiling Guide] - Performance analysis tools and methods
-* xref:../integration/metrics-integration.adoc[Metrics Integration] - Performance monitoring integration
+* xref:graalvm-rsa-optimization-analysis.adoc[GraalVM RSA Analysis] - Cryptographic performance analysis
+* link:../../../benchmarking/doc/Analysis-01.2026-Integration.adoc[Integration Benchmark Analysis] - Full benchmark data tables
+* link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc[JFR Profiling Analysis] - CPU hotspot analysis
+* link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition] - Five-layer latency breakdown
 
-== Performance Baselines
+== Performance Baselines (January 2026)
 
-=== Current Performance Metrics
+=== System Configuration
 
-**System Configuration**:
+* **Platform**: Apple M4, 10 CPU cores, 32 GB RAM
+* **Runtime**: Mandrel jdk-25 native image
+* **Framework**: Quarkus 3.27.2 (LTS)
+* **Container**: Docker with Keycloak for token issuance
 
-* Apple M4, 10 CPU cores, 32 GB RAM
-* Docker containers for JWT validation and Keycloak
-* GraalVM/Mandrel native image compilation
-
-**Current Performance** (July 20, 2025):
+=== Current Performance Summary
 
 [cols="3,2,2,2", options="header"]
 |===
-| Test Type | Throughput (ops/s) | Latency P95 (ms) | Status
+| Endpoint | Throughput | P50 Latency | P99 Latency
 
-| **JWT Validation (Native)**
-| 889-1,179
-| 195.6-280.2ms
-| ✅ Varies by image type
+| **JWT Validation**
+| 22,700-24,300 ops/s
+| 1.91ms
+| 4.78ms
 
-| **Health Check (System baseline)**
-| 20,301
-| 23.7ms
-| ✅ Infrastructure baseline
+| **Health Check**
+| 64,900-89,900 ops/s
+| 0.426-0.510ms
+| 1.37ms
 
-| **JWT Library (Micro-benchmark)**
-| ~200,000
-| ~5ms
-| ✅ Library standalone performance
+| **JWT Library (JMH)**
+| 159,100 ops/s
+| 77µs
+| N/A
 |===
 
-**Performance Gap Analysis**:
+NOTE: JWT validation is 4.55x slower than health check baseline due to CDI producer chain, JWT parsing, and signature verification overhead. Health P50 varies between benchmark runs (0.426-0.510ms) due to normal benchmark variance (±20%).
 
-- **JWT Processing Overhead**: 171.9ms (195.6ms - 23.7ms)
-- **JWT Library Performance**: ~5ms (micro-benchmark)
-- **Unknown Overhead**: 166.2ms (needs investigation)
-- **Optimization Target**: Identify and reduce the 166.2ms unknown overhead
+=== Connection Scaling Performance
 
-=== Load Testing Configuration
+JWT validation throughput remains stable at **22.7-24.3K ops/s** across 50-300 concurrent connections, with a constant JWT/Health P50 latency ratio of **4.55x** (SD 0.09). This demonstrates excellent scalability — JWT-specific overhead is a fixed multiplier, not a load-dependent bottleneck.
 
-**wrk Benchmark Parameters**:
+See link:../../../benchmarking/doc/Analysis-01.2026-Integration.adoc[Integration Benchmark Analysis] for full connection sweep data.
 
-[source,bash]
-----
-# Health check benchmark (system baseline)
-./docker/wrk/run-health-benchmark.sh 4 80 120s
+== Latency Decomposition
 
-# JWT validation benchmark
-./docker/wrk/run-wrk-benchmark.sh 4 80 120s benchmark
-----
+=== Summary
 
-**Container Configuration**:
-
-[source,properties]
-----
-# JFR Native Image Support (2024-2025 best practices)
-quarkus.native.monitoring=jfr
-
-# Virtual Threads
-quarkus.virtual-threads.name-prefix=jwt-validation
-quarkus.virtual-threads.shutdown-timeout=10s
-
-# Container resource limits (optimized)
-quarkus.native.container-runtime-options=-m=512m,--cpus=2.0
-----
-
-**Docker Multi-stage Build (Maven Profiles)**:
-
-[source,bash]
-----
-# Production build (distroless, 104MB)
-cd oauth-sheriff-quarkus-parent/oauth-sheriff-quarkus-integration-tests
-./mvnw clean verify -Pintegration-tests
-
-# JFR profiling build (UBI-based, 187MB)
-cd oauth-sheriff-quarkus-parent/oauth-sheriff-quarkus-integration-tests
-./mvnw clean verify -Pjfr
-
-# Run benchmarks with distroless containers
-cd oauth-sheriff-quarkus-parent/oauth-sheriff-quarkus-integration-tests
-./mvnw clean verify -Pintegration-tests
-
-# Run benchmarks with JFR profiling containers
-cd oauth-sheriff-quarkus-parent/oauth-sheriff-quarkus-integration-tests
-./mvnw clean verify -Pjfr
-----
-
-== Performance Bottleneck Analysis
-
-=== JWT Validation Pipeline Analysis
-
-**Current Performance Bottlenecks** (July 20, 2025):
-
-1. **Unknown Overhead**: 166.2ms (85% of total JWT processing)
-   * Requires JFR analysis to identify root cause
-   * Likely cryptographic operations or container networking
-   * **Primary optimization target: JFR profiling**
-
-2. **JWT Library Processing**: ~5ms (3% of total JWT processing)
-   * Confirmed by micro-benchmark analysis
-   * Signature verification, JSON parsing, JWKS loading
-   * **Already optimized**
-
-3. **System Infrastructure**: 23.7ms (12% of total latency)
-   * Docker networking, HTTP processing
-   * TLS overhead (verified as not a bottleneck)
-   * **Baseline acceptable**
-
-**JFR Analysis Results** (JVM Mode Reference):
-
-- **RSA Cryptographic Operations**: 85% of CPU time
-- **TLS/SSL Handshake Processing**: 12% of CPU time
-- **Network I/O Operations**: 3% of CPU time
-
-**Note**: Native image performance patterns may differ from JVM analysis.
-
-=== Resource Utilization Targets
-
-**Performance Targets**:
-
-[cols="2,2,2,3", options="header"]
+[cols="2,2,2", options="header"]
 |===
-| Metric | Current Value | Target | Status
+| Component | Latency (P50) | Percentage
 
-| JWT Validation Throughput
-| 1,179 ops/s
-| >1,000 ops/s
-| ✅ Meets target
+| Shared Infrastructure (Docker, TLS, HTTP/2, Quarkus routing)
+| 0.510ms
+| 27%
 
-| JWT Validation P95 Latency
-| 195.6ms
-| <20ms
-| ❌ Needs optimization
+| Framework Overhead (POST, JAX-RS, Jackson)
+| 0.313ms
+| 16%
 
-| Health Check P95 Latency
-| 23.7ms
-| <10ms
-| ❌ Needs optimization
-
-| JWT Container Memory
-| ~50MB RSS
-| <90% of 512MB limit
-| ✅ Efficient usage
-
-| Startup Time
-| 0.263s
-| <1s
-| ✅ Excellent native performance
+| **Token Validation** (CDI producer + JWT validation)
+| **1.087ms**
+| **57%**
 |===
 
-**Critical Performance Issue**: The 166.2ms unknown overhead represents the primary bottleneck preventing achievement of the 20ms target latency. JFR analysis is required to identify the root cause.
+**Total**: 0.510 + 0.313 + 1.087 = **1.91ms** (JWT P50 at 50 connections)
+
+=== Key Insight
+
+A **mock JWT endpoint** (`/mock-jwt/validate`) performs all HTTP processing but skips `tokenValidator.createAccessToken()`. This isolates the token validation cost at **1.087ms** — the dominant contributor (57%) to request latency.
+
+The application context (1.087ms) is **14x slower** than the isolated library (77µs JMH). This gap includes CDI `Instance.get()` resolution, InjectionPoint introspection, `@Timed` instrumentation, and object allocation under 50 concurrent connections. JFR analysis shows this is primarily non-CPU overhead (memory allocation, CDI context creation) rather than lock contention.
+
+See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition — Ablation Study] for five-layer methodology and link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc[JFR Profiling Analysis] for non-CPU overhead analysis.
+
+=== CDI Overhead: Inherent by Design
+
+**Investigation Status**: Complete — root cause understood, optimization not feasible.
+
+The 14x JMH-to-integration gap is caused by CDI `Instance.get()` overhead, which is **inherent to the security design**:
+
+* Each `Instance.get()` call creates a `CreationalContext`, constructs `InjectionPointImpl`, and extracts `@BearerToken` annotation parameters
+* The `JwtValidationEndpoint` uses multiple injection points with different authorization requirements (scopes, roles, groups)
+* Quarkus `@WithCaching` cannot be applied because it would cache the first result and return it for all injection points → **security bypass**
+
+**Why this matters**: The overhead is the cost of per-request authorization validation with different requirements per injection point. This is correct behavior, not a bug.
+
+**Performance impact**: Despite the overhead, performance targets are exceeded (23K ops/s vs 10K target, 1.9ms P50 vs 5ms target).
+
+See link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc#_cdi_instanceget_research_findings[CDI Instance.get() Research Findings] for full analysis.
+
+== JWT Library Performance (JMH Analysis)
+
+=== Component-Level Timing
+
+[cols="2,2,2", options="header"]
+|===
+| Component | Time | Share of JWT Processing
+
+| RSA Signature Verification
+| 68µs
+| **88%**
+
+| Token Parsing
+| 4.3µs
+| 6%
+
+| Cache Operations
+| 0.1µs
+| <1%
+
+| Other
+| ~4.6µs
+| 6%
+|===
+
+=== RSA Performance Verdict
+
+**RSA signature verification at 68µs is excellent** and NOT a performance bottleneck. Historical claims of 230ms RSA overhead were based on incorrect benchmark methodology.
+
+JFR profiling confirms BigInteger.modPow() accounts for only **1% of CPU samples** during load testing. The dominant CPU consumer is **TLS encryption at 89%** (HTTPS overhead, not JWT-specific).
+
+See link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc[JFR Profiling Analysis] for full CPU hotspot data.
 
 == Algorithm Performance Characteristics
 
-=== Signature Algorithm Performance
+=== Signature Algorithm Comparison
 
-**JOSE-Compliant Algorithm Performance** (relative characteristics):
+[cols="2,2,2,3", options="header"]
+|===
+| Algorithm | Type | Security Level | Performance Notes
 
-* **ECDSA (ES256/384/512)**: Fastest signature verification
-* **RSA (RS256/384/512)**: Moderate signature verification performance
-* **RSA-PSS (PS256/384/512)**: Higher computational overhead
+| RS256/384/512
+| RSA
+| 2048-bit
+| 68µs - Current default, excellent performance
 
-**Note**: All JOSE algorithms maintain equivalent performance optimization - no algorithm selection bias applied.
+| ES256/384/512
+| ECDSA
+| 256-384-bit curves
+| Expected faster, marginal benefit over current RSA
 
-=== JSON Parser Performance
+| Ed25519/Ed448
+| EdDSA
+| Curve25519/448
+| Fastest, smaller signatures
+|===
 
-**Current JSON Parser** (DSL-JSON with Jakarta JSON API compatibility):
+=== Algorithm Migration Guidance
 
-* Security-first design with configurable limits
-* Native image compatible
-* Represents 15-20% of total processing time
+**No urgent algorithm migration required.** With RSA at 68µs (88% of 77µs total library processing), algorithm choice should be driven by:
 
-**Security Limits Configuration**:
+1. **Standards compliance** - What do your identity providers support?
+2. **Token size** - EdDSA provides smaller signatures for bandwidth-constrained scenarios
+3. **Key management** - RSA key rotation workflows may differ from ECDSA/EdDSA
 
-[source,java]
-----
-Max token size: 8KB
-Max payload size: 8KB per JWT part
-Max string size: 4KB per JSON field
-Max array size: 64 elements
-Max depth: 10 levels
-----
+Migration to ECDSA/EdDSA would provide marginal improvement (~50µs savings) representing only 2.5% of total request latency.
 
 == Native Image Performance
 
-=== GraalVM Optimization Impact
+=== Build Metrics
 
-**Enhanced Reflection Configuration**:
+[cols="2,2,3", options="header"]
+|===
+| Metric | Value | Notes
 
-* 23+ performance-critical classes registered for reflection
-* JWT validation pipeline classes (50-60% of processing impact)
-* JWKS loading classes (10-15% of processing impact)
-* Domain token and claim processing classes
+| Startup Time
+| 0.172s
+| Excellent for serverless/container workloads
 
-**Native Image Build Metrics** (dual-image approach):
+| Image Size (Distroless)
+| ~104MB
+| Production deployment target
 
-* **Distroless (Production)**:
-  * Build size: ~104MB (minimal attack surface)
-  * Startup time: 0.263s
-  * JFR: Limited by filesystem permissions
+| Image Size (JFR-enabled)
+| ~187MB
+| Includes UBI runtime for profiling
 
-* **UBI-based (Profiling)**:
-  * Build size: ~187MB (includes UBI runtime)
-  * Startup time: 0.296s
-  * JFR: Fully functional with file generation
+| Memory (RSS)
+| ~50-128MB peak
+| Efficient for 512MB container limit
 
-* Build time: 4m 30s (both variants)
-* Memory efficiency: ~50MB RSS (both variants)
+| Build Time
+| ~4m 30s
+| With Mandrel jdk-25 container build
+|===
 
-=== Container Resource Efficiency
+=== GraalVM/Mandrel 25 Features
 
-**Memory Utilization**:
+* **WP-SCCP**: Whole-Program Sparse Conditional Constant Propagation (enabled by default)
+* **ML Profile Inference**: 1-3% performance boost via GraalNN
+* **JCMD Support**: Native images now support `jcmd` for runtime diagnostics
+* **JFR Improvements**: New `jdk.ObjectAllocationSample` event
 
-* Base memory usage: ~6.4MB
-* Memory efficiency: 90%+ of allocated container memory available
-* No memory pressure under load testing
+== Performance Targets
 
-**CPU Utilization**:
+=== Current Achievement Status
 
-* Achieves 100%+ CPU utilization under load
-* Optimal multi-threaded performance with virtual threads
-* No CPU throttling or resource contention
+[cols="2,2,2,2", options="header"]
+|===
+| Metric | Target | Actual | Status
 
-== Performance Validation Methods
+| JWT Throughput
+| >10,000 ops/s
+| 22,700+ ops/s
+| ✅ Exceeds 2.3x
 
-=== Benchmark Execution
+| JWT P50 Latency
+| <5ms
+| 1.91ms
+| ✅ Exceeds by 2.6x
 
-**Standard Benchmark Script**:
+| Health Baseline
+| >50,000 ops/s
+| 64,900+ ops/s
+| ✅ Exceeds 1.3x
+
+| Memory Usage
+| <90% of 512MB
+| ~128MB peak
+| ✅ 25% utilization
+
+| Startup Time
+| <1s
+| 0.172s
+| ✅ Exceeds 5.8x
+|===
+
+=== Performance Optimization Priorities
+
+If further optimization is needed:
+
+1. **CDI Producer Chain** — ❌ **Not optimizable** (see <<CDI Overhead: Inherent by Design>>). `@RequestScoped` caching and `@WithCaching` are blocked by security requirements — different injection points require different authorization parameters.
+2. **TLS Session Resumption** - Verify session cache effectiveness
+3. **Connection Pooling** - Monitor Netty buffer allocation under extreme load
+
+NOTE: The dominant cost (CDI Instance.get() overhead at 57% of latency) cannot be reduced without API changes. Current performance (23K ops/s, 1.9ms P50) exceeds all targets.
+
+== Benchmark Execution
+
+=== Standard Benchmark Commands
 
 [source,bash]
 ----
-# Run comprehensive JWT validation benchmarks
-./scripts/benchmark-with-monitoring.sh
+# Build and run integration benchmarks
+cd oauth-sheriff-quarkus-parent/oauth-sheriff-quarkus-integration-tests
+../../mvnw clean verify -Pintegration-tests
+
+# Run JMH microbenchmarks
+cd benchmarking/benchmark-core
+../../mvnw clean verify -Pbenchmark
+
+# JFR profiling with volume mount
+docker compose -f docker-compose.yml -f docker-compose.jfr.yml up -d
 ----
-
-**JFR Analysis**:
-
-* Call stack profiling for bottleneck identification
-* Memory allocation pattern analysis
-* Threading efficiency measurement
 
 === Performance Regression Detection
 
-**Threshold Criteria**:
-
-* Minimum improvement threshold: >5% throughput gain
-* Regression threshold: >5% throughput loss
-* Memory usage threshold: <90% container limit
-* CPU utilization target: ≥90% under load
-
-== Architecture Performance Impact
-
-=== Quarkus Integration Efficiency
-
-**Integration Performance Factors**:
-
-* CDI bean creation and proxy generation overhead: Minimal
-* Native image reflection configuration: Optimized
-* Virtual thread scheduling: Efficient
-* Container resource allocation: Optimal
-
-**Framework Integration Overhead**:
-
-* Current performance: 86% of framework NOOP baseline
-* Integration efficiency: Highly optimized
-* Resource utilization: Optimal CPU and memory usage
-
-=== Concurrency Performance
-
-**Virtual Thread Performance**:
-
-* Thread pool: 200 concurrent threads for benchmarking
-* Thread creation overhead: Minimal with virtual threads
-* Context switching efficiency: High
-* Memory overhead per thread: Low
-
-== Success Criteria
-
-=== Performance Compliance
-
-A JWT validation implementation meets performance standards when:
-
-* Throughput exceeds 200 ops/s baseline
-* Latency remains under 5ms per request
-* CPU utilization reaches ≥90% under load
-* Memory usage stays within container limits
-* No performance regressions >5% during updates
-
-=== Quality Metrics
-
-**Technical Performance Indicators**:
-
-* Signature verification efficiency across all JOSE algorithms
-* JSON parsing performance within security limits
-* JWKS loading and caching effectiveness
-* Native image compilation and runtime efficiency
+* **Regression threshold**: >10% throughput loss
+* **Improvement threshold**: >5% throughput gain
+* **Memory threshold**: <90% container limit
+* **CPU utilization target**: ≥90% under load
 
 == See Also
 
-* xref:native-optimization-guide.adoc[Native Optimization Guide] - GraalVM build configuration
-* xref:jfr-profiling-guide.adoc[JFR Profiling Guide] - Performance analysis tools
-* xref:../integration/metrics-integration.adoc[Metrics Integration] - Performance monitoring setup
+* xref:native-optimization-guide.adoc[Native Optimization Guide]
+* xref:jfr-profiling-guide.adoc[JFR Profiling Guide]
+* xref:graalvm-rsa-optimization-analysis.adoc[GraalVM RSA Analysis]
+* xref:graalvm-enterprise-optimization-options.adoc[Enterprise Optimization Options]

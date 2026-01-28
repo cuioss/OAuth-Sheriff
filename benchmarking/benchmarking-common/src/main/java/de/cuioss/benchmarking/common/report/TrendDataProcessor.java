@@ -160,7 +160,7 @@ public class TrendDataProcessor {
         String direction = StatisticsCalculator.determineTrendDirection(
                 changePercentage, STABILITY_THRESHOLD * 100);
 
-        // Calculate simple moving average for compatibility (last 5 runs including current)
+        // Calculate simple moving average using last 5 runs (industry-standard window)
         List<Double> recentScores = new ArrayList<>();
         recentScores.add(currentMetrics.performanceScore());
         historicalData.stream()

@@ -121,7 +121,7 @@ quarkus.native.container-build=true
 quarkus.native.container-runtime-options=-m=4g
 
 # Container image for building
-quarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+quarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-25
 ----
 
 === Security Configuration
@@ -293,7 +293,7 @@ quarkus.native.resources.includes=**/*.p12,**/*.crt,**/*.key,**/*.json
 quarkus.native.enable-reports=true
 
 # Builder image
-quarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+quarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-25
 ----
 
 === Microservice Configuration

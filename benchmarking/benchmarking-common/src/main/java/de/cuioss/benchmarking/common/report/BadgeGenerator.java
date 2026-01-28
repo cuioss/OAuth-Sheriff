@@ -138,7 +138,7 @@ public class BadgeGenerator {
 
     /**
      * Writes all badge files to the specified directory using default MICRO benchmark type.
-     * This method is provided for backward compatibility with tests.
+     * Convenience overload that defaults to {@link BenchmarkType#MICRO}.
      *
      * @param metrics the current benchmark metrics
      * @param trendMetrics the trend metrics (can be null)
