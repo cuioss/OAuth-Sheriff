@@ -1,4 +1,4 @@
-= GraalVM Enterprise Edition Optimization Options
+= GraalVM Enterprise Optimization Options
 :toc: left
 :toclevels: 3
 :toc-title: Table of Contents
@@ -7,215 +7,214 @@
 
 == Overview
 
-This document outlines GraalVM Enterprise Edition specific optimization approaches for RSA cryptographic performance. These solutions require commercial licensing and are provided as reference for organizations with Enterprise Edition access.
+This document outlines GraalVM Enterprise Edition (Oracle GraalVM) specific optimization options. These features require Oracle GraalVM or commercial licensing.
 
-**Context**: Open-source project using GraalVM Community Edition as primary target +
-**Purpose**: Enterprise-specific optimization reference for organizations with commercial licensing +
-**Relationship**: Supplement to xref:graalvm-rsa-optimization-analysis.adoc[main optimization analysis]
+**Context**: OAuth Sheriff targets GraalVM Community Edition (Mandrel) as primary runtime +
+**Purpose**: Reference for organizations with Oracle GraalVM access +
+**Current Performance**: Community Edition achieves 22,700+ ops/s JWT validation
 
 == Enterprise Edition Features
 
 === Profile-Guided Optimization (PGO)
 
-**Description**: Collect profiling data and use it to optimize native image compilation
+**Description**: Collect profiling data during representative workload execution, then use that data to optimize native image compilation.
 
 **Implementation**:
-```bash
+
+[source,bash]
+----
 # Step 1: Build instrumented executable
-native-image --pgo-instrument
+native-image --pgo-instrument YourApp
 
-# Step 2: Run application to collect profile
-./application-instrumented
+# Step 2: Run application with representative workload
+./your-app-instrumented
+# Generate traffic to collect profile data
 
-# Step 3: Build optimized executable
-native-image --pgo=default.iprof -O3
-```
+# Step 3: Build optimized executable using collected profile
+native-image --pgo=default.iprof -O3 YourApp
+----
 
-**Performance Benefits**:
+**Expected Benefits**:
 
-- **Improvement**: 15-20% performance gain
-- **Size Reduction**: 15% smaller binary size
-- **Optimization**: ML-powered profile inference with GraalNN
+* 15-20% performance improvement (Oracle estimates)
+* 10-15% smaller binary size
+* Better branch prediction optimization
 
-**Applicability to RSA**: May provide modest improvement to BigInteger operations but won't solve fundamental AOT vs JIT performance gap
-
-=== Jipher JCE Provider
-
-**Description**: Oracle-developed JCA provider with OpenSSL 3.0 FIPS validation
-
-**Advantages**:
-
-- ✅ **Native Image Optimized**: Specifically designed for GraalVM native image
-- ✅ **FIPS Compliant**: FIPS 140-2 validated cryptographic operations
-- ✅ **OpenSSL Integration**: Leverages optimized OpenSSL 3.0 implementations
-- ✅ **Oracle Support**: Official Oracle product with enterprise support
-
-**Implementation Requirements**:
-
-- GraalVM Enterprise Edition license
-- FIPS compliance requirements
-- Dynamic library deployment
-
-**Expected Performance**: Competitive with BouncyCastle and default JDK providers, but specific RSA performance improvements over default providers not quantified
+**Note**: With current performance at 22,700 ops/s, PGO would provide incremental improvement (potentially 25,000-27,000 ops/s) rather than transformational gains.
 
 === G1 Garbage Collector
 
-**Description**: Advanced garbage collector optimized for low latency
+**Description**: Advanced garbage collector optimized for low latency.
 
 **Implementation**:
-```bash
-native-image --gc=G1
-```
+
+[source,bash]
+----
+native-image --gc=G1 YourApp
+----
+
+**Availability**: Linux only with Oracle GraalVM
 
 **Benefits**:
 
-- Improved latency and throughput
-- Better memory management for crypto workloads
-- Available only on Linux with Oracle GraalVM
+* Improved latency consistency
+* Better performance for memory-intensive workloads
+* Concurrent garbage collection
 
-**Applicability**: May provide modest improvement but won't address RSA algorithm fundamentals
+**Assessment**: Serial GC (default) performs well for JWT validation workloads. G1 may help with extreme concurrency scenarios.
 
-=== Advanced Optimization Flags
+=== Jipher JCE Provider
 
-**ML-Powered Optimization**:
-```bash
-# GraalNN static profiler (JDK 24+)
-native-image -O3
-```
+**Description**: Oracle-developed JCA provider with OpenSSL 3.0 backend for FIPS validation.
 
-**Enterprise Build Configuration**:
-```bash
-native-image \
-  -O3 \
-  --gc=G1 \
-  --pgo=production.iprof \
-  -march=native \
-  --enable-monitoring=jfr
-```
+**Status Update (GraalVM 25)**:
+
+[WARNING]
+====
+Jipher is **no longer bundled** with Oracle GraalVM 25. It must be downloaded separately from Oracle's Java Tools and Resources portal.
+====
+
+**Use Cases**:
+
+* FIPS 140-2 compliance requirements
+* Regulated environments (financial, healthcare, government)
+* OpenSSL-optimized cryptographic operations
+
+**Assessment**: With RSA at 68µs using default JDK provider, Jipher is only relevant for FIPS compliance, not performance optimization.
+
+=== ML-Powered Optimization (GraalVM 25)
+
+**Description**: GraalNN neural network for profile inference, available in both Community and Enterprise editions.
+
+**Implementation**:
+
+[source,bash]
+----
+# Automatically enabled with -O2 and -O3
+native-image -O3 YourApp
+----
+
+**Features**:
+
+* XGBoost-based static profiler for call-count inference
+* Classifies methods as "regular/hot" or "cold"
+* Guides optimization decisions
+* 1-3% performance boost
+
+**Note**: This feature is now available in Community Edition (Mandrel) as well.
 
 == Cost-Benefit Analysis
 
-=== Enterprise Edition Costs
+=== Current Community Edition Performance
 
-**Licensing Considerations**:
+[cols="2,2,2", options="header"]
+|===
+| Metric | Community Edition | Notes
 
-- Commercial GraalVM Enterprise Edition licensing required
-- Per-processor or per-application licensing models
-- Support and maintenance costs
-- Legal and compliance overhead
+| JWT Throughput
+| 22,700+ ops/s
+| Exceeds targets by 2.3x
 
-=== Performance Expectations
+| P50 Latency
+| 1.91ms
+| Exceeds target by 2.6x
 
-**Realistic Improvements**:
+| RSA Verification
+| 68µs
+| Excellent, no bottleneck
 
-- **PGO + O3**: 15-20% improvement over Community Edition
-- **Jipher JCE**: Potentially better than default JDK but not dramatically
-- **G1 GC**: Improved latency characteristics but not algorithmic performance
+| Startup Time
+| 0.172s
+| Exceeds target by 5.8x
+|===
 
-**Current Performance Gap**: 230ms RSA verification vs target <10ms
+=== Enterprise Edition Expected Gains
 
-**Enterprise Edition Impact**: Estimated 15-25% improvement → ~175-195ms (still far from target)
+[cols="2,2,2", options="header"]
+|===
+| Feature | Expected Improvement | Cumulative Ops/s
 
-=== ROI Analysis
+| Baseline (Community)
+| -
+| 22,700
 
-**Algorithm Migration Alternative**:
+| PGO
+| +15-20%
+| 26,000-27,200
 
-- **Cost**: Zero (using standard OAuth algorithms)
-- **Performance**: 95%+ improvement (230ms → 5-10ms)
-- **Implementation**: Lower risk, faster delivery
+| G1 GC (if applicable)
+| +5-10%
+| 27,300-29,900
 
-**Enterprise Edition Approach**:
+| Combined Maximum
+| +25-30%
+| ~29,500
+|===
 
-- **Cost**: Commercial licensing + implementation overhead
-- **Performance**: 15-25% improvement (230ms → 175-195ms)
-- **Implementation**: Higher complexity, vendor dependency
+**Assessment**: Enterprise Edition could potentially achieve ~30,000 ops/s, but 22,700 ops/s already exceeds requirements. The incremental gain may not justify licensing costs for most deployments.
 
-**Conclusion**: Algorithm migration provides superior ROI
+=== When Enterprise Edition Matters
 
-== Implementation Scenarios
+**Consider Enterprise Edition if**:
 
-=== Scenario 1: FIPS Compliance Requirement
+1. **FIPS Compliance Required**: Jipher provides certified FIPS 140-2 cryptography
+2. **Already Using Oracle Infrastructure**: Existing Oracle GraalVM deployments
+3. **Extreme Performance Requirements**: Need every percentage point of throughput
+4. **Enterprise Support Required**: Oracle support contracts
 
-**Use Case**: Organization requires FIPS 140-2 validated cryptography
+**Community Edition is Sufficient if**:
 
-**Solution**: Jipher JCE with FIPS-approved algorithms
+1. **Standard JWT Validation**: 22,700+ ops/s meets requirements
+2. **No FIPS Requirement**: Default JDK provider is adequate
+3. **Cost Sensitivity**: Licensing costs exceed performance value
+4. **Mandrel Ecosystem**: Red Hat/Quarkus alignment preferred
 
-- ES256 (ECDSA) likely FIPS-approved
-- Ed25519 approved in FIPS 186-5 (2023)
-- Combine algorithm migration with Jipher JCE
+== Build Configuration Reference
 
-**Recommendation**: Algorithm migration + Jipher JCE for FIPS compliance
+=== Community Edition (Mandrel)
 
-=== Scenario 2: Maximum Performance Requirement
+[source,bash]
+----
+# Standard optimized build
+native-image -O2 \
+  --enable-monitoring=jcmd,jfr,heapdump \
+  --enable-all-security-services \
+  --enable-url-protocols=https,http \
+  YourApp
+----
 
-**Use Case**: Performance is critical and budget allows Enterprise Edition
+=== Enterprise Edition (Oracle GraalVM)
 
-**Solution**: Full Enterprise optimization stack
-
-- Algorithm migration to ES256/EdDSA
-- PGO optimization
-- G1 garbage collector
-- Advanced build flags
-
-**Expected Result**: ~30-50ms total JWT validation (vs 35-45ms with Community Edition)
-
-=== Scenario 3: Enterprise Infrastructure
-
-**Use Case**: Organization already uses Oracle GraalVM Enterprise Edition
-
-**Solution**: Leverage existing licensing for incremental improvements
-
-- Apply PGO to current RSA implementation
-- Test Jipher JCE performance
-- Still implement algorithm migration for maximum benefit
-
-**Approach**: Dual optimization (algorithm + Enterprise features)
-
-== Recommendations for Enterprise Users
-
-=== Primary Strategy
-
-1. **Implement Algorithm Migration First**: ES256/EdDSA provides 95%+ improvement
-2. **Add Enterprise Features**: Layer PGO and Jipher JCE for incremental gains
-3. **Validate Performance**: Measure combined impact vs individual approaches
-
-=== Secondary Optimizations
-
-**If Algorithm Migration Insufficient**:
-
-- Apply PGO optimization to crypto-heavy workloads
-- Consider Jipher JCE for FIPS requirements
-- Use G1 GC for latency-sensitive applications
-
-**Build Configuration**:
-```bash
-# Optimal Enterprise build for cryptography
-native-image \
-  -O3 \
+[source,bash]
+----
+# Maximum optimization with PGO and G1
+native-image -O3 \
+  --pgo=production.iprof \
   --gc=G1 \
-  --pgo=crypto-workload.iprof \
+  --enable-monitoring=jcmd,jfr,heapdump \
+  --enable-all-security-services \
+  --enable-url-protocols=https,http \
   -march=native \
-  --enable-monitoring=jfr \
-  -H:+AllowVMInspection
-```
+  YourApp
+----
 
 == Conclusion
 
-**Enterprise Edition Value**:
+**Primary Recommendation**: Use Mandrel (Community Edition) for OAuth Sheriff deployments.
 
-Provides incremental performance improvements (15-25%) over Community Edition
+* Current performance (22,700+ ops/s) exceeds targets significantly
+* RSA at 68µs is not a bottleneck requiring enterprise optimization
+* Enterprise Edition provides incremental, not transformational, gains
+* Community Edition receives GraalVM 25 improvements (ML profile inference, JCMD support)
 
-**Primary Limitation**: Cannot solve fundamental RSA performance issues in AOT compilation
+**Consider Enterprise Edition only for**:
 
-**Optimal Strategy**:
+* FIPS 140-2 compliance via Jipher
+* Organizations already invested in Oracle GraalVM
+* Extreme micro-optimization scenarios
 
-1. Algorithm migration (95% improvement, zero cost)
-2. Enterprise features (additional 15-25% improvement, commercial cost)
+== Related Documents
 
-**Decision Framework**: Enterprise Edition is complementary to, not a replacement for, algorithm optimization in addressing RSA performance bottlenecks.
-
-== See Also
-
-* xref:graalvm-rsa-optimization-analysis.adoc[Main GraalVM RSA Optimization Analysis]
-* xref:jwt-validation-performance.adoc[JWT Validation Performance Baselines]
-* xref:native-optimization-guide.adoc[Community Edition Native Optimization Guide]
+* xref:jwt-validation-performance.adoc[JWT Validation Performance] - Current performance baselines
+* xref:graalvm-rsa-optimization-analysis.adoc[GraalVM RSA Analysis] - Cryptographic performance details
+* xref:native-optimization-guide.adoc[Native Optimization Guide] - Community Edition configuration
