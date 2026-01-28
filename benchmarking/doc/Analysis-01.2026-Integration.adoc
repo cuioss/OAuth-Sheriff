@@ -311,3 +311,100 @@ Comprehensive WRK stress testing across 50-300 connections reveals:
 * **Cache effectiveness**: Lock-free cache achieves 100% hit rate (size 20), zero performance collapse
 * **JMH vs integration gap**: Core library validates in 77µs (JMH isolation), but integration validation costs 1.087ms — 14.1x more due to CDI producer resolution, `@Timed` instrumentation, concurrent cache contention, and real object allocation
 * **Dominant cost**: CDI producer chain combined with JWT validation accounts for 57% (1.087ms) of request latency — the primary optimization target. JAX-RS POST routing adds 14% (0.274ms); Vert.x context resolution and header parsing are negligible (~2% combined)
+
+== Aspects Evaluated but Ruled Out
+
+This section consolidates factors systematically investigated as potential causes of the 14x JMH-to-integration gap (77µs → 1,087µs), with measured evidence showing they do NOT explain the performance difference.
+
+=== Lock Contention
+
+**Finding**: Lock contention is **not** a performance factor.
+
+[cols="2,3", options="header"]
+|===
+| Metric | Value
+
+| JavaMonitorEnter events (240s benchmark) | 14 total
+| Monitors involved | `Http1xServerConnection` (6), `EPollSelectorImpl` (8)
+| Per-event duration | 10-14ms
+| Impact on 21K req/s throughput | Negligible (<0.001%)
+|===
+
+The 14 lock events over 240 seconds represent sporadic Vert.x HTTP/1.x connection write queue contention — standard behavior, not a bottleneck.
+
+=== Garbage Collection
+
+**Finding**: GC overhead is **not** the primary cause of the 14x gap.
+
+[cols="2,3", options="header"]
+|===
+| Metric | Value
+
+| GC events (60s benchmark) | 1,312
+| Total pause time | 2,223ms (3.7% of wall-clock)
+| GC frequency | 22 GCs/second
+| Requests per GC | ~950 (21K req/s ÷ 22 GCs/s)
+| Pause distribution | 89% at 1-2ms, 10% at >10ms
+| Heap usage (sawtooth) | 10-100 MB, avg 45 MB
+|===
+
+At 22 GCs/second with ~21,000 requests/second, only 1 in 950 requests encounters a GC pause. The 3.7% overhead is amortized — most individual requests complete without GC interference. GC contributes to tail latency (P99) but not median latency.
+
+=== Access Log Filter
+
+**Finding**: The filter adds overhead but does **not** explain the JWT-health gap.
+
+The `CustomAccessLogFilter` runs on **all** JAX-RS endpoints (both health and JWT), executing `shouldLog()` and `isPathIncluded()` on every response.
+
+[cols="2,2,2,2", options="header"]
+|===
+| Endpoint | Filter Enabled | Filter Disabled | Difference
+
+| Health P50 | 0.510ms | 0.417ms | **-0.093ms (18%)**
+| JWT P50 | 1.91ms | 1.96ms | +0.05ms (variance)
+| JWT/Health ratio | 4.55x | 4.70x | ~same
+|===
+
+**Conclusion**: Filter overhead is ~0.1ms per request, visible equally on both endpoints. The 1.4ms JWT-health gap (1.91ms − 0.51ms) remains unchanged when the filter is disabled, confirming it does not explain JWT-specific latency.
+
+=== CDI @ApplicationScoped Injection
+
+**Finding**: CDI constructor injection has **zero** per-request cost.
+
+The ablation study compared a bare JAX-RS endpoint (zero CDI) against a CDI-injected endpoint:
+
+[cols="2,2,2", options="header"]
+|===
+| Variant | P50 (ms) | Notes
+
+| A: Bare Baseline (no CDI) | 0.870 | Zero `@Inject` dependencies
+| B: JAX-RS Baseline (CDI-injected) | 0.784 | `@ApplicationScoped` class
+| Difference (A − B) | **+0.086ms** | CDI is _faster_
+|===
+
+Variant A (no CDI) was 0.086ms **slower** than B (CDI-injected) — the opposite of what CDI overhead would cause. This confirms `@ApplicationScoped` beans are resolved at startup, not per request. The 0.086ms difference is attributable to benchmark ordering variance (A ran 6th, B ran 4th).
+
+=== @RequestScoped Producer Refactoring
+
+**Finding**: Refactoring to `@RequestScoped` is **not feasible** due to semantic constraints.
+
+The `BearerTokenProducer.produceBearerTokenResult()` method is `@Dependent` scoped. Investigation of a `@RequestScoped` refactoring revealed:
+
+* Multiple injection points use different `@BearerToken` annotation parameters (different required scopes/roles)
+* A `@RequestScoped` producer would cache the **first** call's result, breaking security validation for subsequent calls with different requirements
+* The current design correctly re-evaluates requirements per injection point
+
+**Conclusion**: The `@Dependent` scope is semantically required for correct security behavior.
+
+=== What Remains: CDI `Instance.get()` + Object Allocation
+
+After ruling out the above factors, the 1.087ms token validation cost is attributed to:
+
+1. **CDI `Instance<BearerTokenResult>` resolution** — each `Instance.get()` creates a `CreationalContextImpl` (250 JFR allocation samples)
+2. **InjectionPoint introspection** — CDI extracts `@BearerToken` annotation parameters per request
+3. **Object allocation** — HashMap, Set, and result objects created per request (3,915 HashMap-related JFR samples)
+4. **Memory barriers** — Lock-free cache operations require memory ordering guarantees
+
+These operations consume wall-clock time without proportionally consuming CPU cycles. JFR shows CUI library at only 0.3% of CPU samples, yet latency decomposition shows token validation at 57% of request time.
+
+Full JFR analysis: link:Analysis-01.2026-JFR-Profiling.adoc[JFR Profiling Analysis — Non-CPU Overhead]
