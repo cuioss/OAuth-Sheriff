@@ -40,7 +40,7 @@ This document defines the current JWT validation performance characteristics, ba
 
 | **Health Check**
 | 64,900-89,900 ops/s
-| 0.510ms
+| 0.426-0.510ms
 | 1.37ms
 
 | **JWT Library (JMH)**
@@ -49,120 +49,44 @@ This document defines the current JWT validation performance characteristics, ba
 | N/A
 |===
 
-NOTE: JWT validation is 4.55x slower than health check baseline due to CDI producer chain, JWT parsing, and signature verification overhead.
+NOTE: JWT validation is 4.55x slower than health check baseline due to CDI producer chain, JWT parsing, and signature verification overhead. Health P50 varies between benchmark runs (0.426-0.510ms) due to normal benchmark variance (±20%).
 
 === Connection Scaling Performance
 
-[cols="1,2,2,2", options="header"]
-|===
-| Connections | JWT ops/s | Health ops/s | JWT/Health Ratio
+JWT validation throughput remains stable at **22.7-24.3K ops/s** across 50-300 concurrent connections, with a constant JWT/Health P50 latency ratio of **4.55x** (SD 0.09). This demonstrates excellent scalability — JWT-specific overhead is a fixed multiplier, not a load-dependent bottleneck.
 
-| 50
-| 24,319
-| 89,932
-| 3.70x
-
-| 100
-| 23,428
-| 75,055
-| 3.20x
-
-| 200
-| 23,190
-| 68,219
-| 2.94x
-
-| 300
-| 22,718
-| 64,947
-| 2.86x
-|===
-
-JWT validation throughput remains stable (22.7-24.3K ops/s) across all connection levels, demonstrating excellent scalability.
+See link:../../../benchmarking/doc/Analysis-01.2026-Integration.adoc[Integration Benchmark Analysis] for full connection sweep data.
 
 == Latency Decomposition
 
-=== Measured Endpoints (Ablation Study)
+=== Summary
 
 [cols="2,2,2", options="header"]
 |===
-| Endpoint | P50 Latency | Throughput
+| Component | Latency (P50) | Percentage
 
-| Health (`/q/health/live`)
-| 0.510ms
-| 64,947 ops/s
-
-| Mock JWT (`/mock-jwt/validate`)
-| 0.823ms
-| 46,800 ops/s
-
-| JWT (`/jwt/validate`)
-| 1.91ms
-| 23,051 ops/s
-|===
-
-The **Mock JWT endpoint** performs identical HTTP processing (CDI injection, header extraction, JSON serialization) but skips JWT validation. This directly measures the validation cost.
-
-=== Latency Breakdown
-
-[cols="2,2,2,2", options="header"]
-|===
-| Component | How Measured | Latency | Percentage
-
-| Shared Infrastructure
-| Health endpoint
+| Shared Infrastructure (Docker, TLS, HTTP/2, Quarkus routing)
 | 0.510ms
 | 27%
 
 | Framework Overhead (POST, JAX-RS, Jackson)
-| Mock JWT − Health
 | 0.313ms
 | 16%
 
-| **Token Validation**
-| JWT − Mock JWT
+| **Token Validation** (CDI producer + JWT validation)
 | **1.087ms**
 | **57%**
 |===
 
-**Total**: 0.510 + 0.313 + 1.087 = 1.91ms ✓
-
-=== Why JWT is Slower than Health
-
-The **1.4ms difference** between JWT (1.91ms) and Health (0.510ms) breaks down into two measured components:
-
-[cols="2,2,2", options="header"]
-|===
-| Component | Latency | Share of 1.4ms
-
-| Framework Overhead (POST, JAX-RS, Jackson)
-| 0.313ms
-| 22%
-
-| **Token Validation**
-| **1.087ms**
-| **78%**
-|===
-
-**Total**: 0.313 + 1.087 = **1.4ms** ✓
+**Total**: 0.510 + 0.313 + 1.087 = **1.91ms** (JWT P50 at 50 connections)
 
 === Key Insight
 
-The **Mock JWT endpoint** (`/mock-jwt/validate`) performs all HTTP processing but skips `tokenValidator.createAccessToken()`. This directly measures the token validation cost:
+A **mock JWT endpoint** (`/mock-jwt/validate`) performs all HTTP processing but skips `tokenValidator.createAccessToken()`. This isolates the token validation cost at **1.087ms** — the dominant contributor (57%) to request latency.
 
-* **Mock JWT baseline**: 0.823ms — full framework path without validation
-* **JWT endpoint**: 1.91ms — adds token validation
-* **Token validation cost**: 1.087ms (JWT − Mock JWT)
+The application context (1.087ms) is **14x slower** than the isolated library (77µs JMH). This gap includes CDI `Instance.get()` resolution, InjectionPoint introspection, `@Timed` instrumentation, and object allocation under 50 concurrent connections. JFR analysis shows this is primarily non-CPU overhead (memory allocation, CDI context creation) rather than lock contention.
 
-This 1.087ms is the **application's token validation feature** — the cost of calling `tokenValidator.createAccessToken()` in the real integration context.
-
-=== Reference: Library Performance
-
-JMH microbenchmark measures the library **in isolation**: 77µs P50.
-
-The application context (1.087ms) is **14x slower** than isolated library (77µs). This difference includes CDI producer invocation, `@Timed` instrumentation, real object allocation, and concurrency under 50 connections.
-
-See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition Analysis] for detailed methodology.
+See link:../../../benchmarking/doc/Analysis-01.2026-Latency-Decomposition.adoc[Latency Decomposition — Ablation Study] for five-layer methodology and link:../../../benchmarking/doc/Analysis-01.2026-JFR-Profiling.adoc[JFR Profiling Analysis] for non-CPU overhead analysis.
 
 == JWT Library Performance (JMH Analysis)
 
