@@ -6,14 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
-# Declare default permissions as read only (principle of least privilege)
-permissions:
-  contents: read
-
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Required for actions/checkout
     strategy:
       matrix:
         version: [ 21,25 ]
@@ -54,6 +51,8 @@ jobs:
     needs: build
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Required for actions/checkout
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -112,6 +111,8 @@ jobs:
     needs: sonar-build
     if: always() && github.ref == 'refs/heads/main' && needs.sonar-build.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Required for actions/checkout
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
