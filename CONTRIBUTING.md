@@ -55,6 +55,24 @@ Both builds must pass without errors or warnings before committing.
 - Document public APIs
 - Keep commits atomic and traceable
 
+### Project Documentation
+
+Please familiarize yourself with the project rules and specifications:
+
+**Build & Development:**
+- [Build Guide](doc/Build.adoc) - Build instructions and profiles
+- [Log Messages](doc/LogMessages.adoc) - Logging standards and LogRecord usage
+
+**Specifications:**
+- [Specification](doc/Specification.adoc) - Core functionality specification
+- [Requirements](doc/Requirements.adoc) - Project requirements
+- [Testing Standards](doc/specification/testing.adoc) - Testing guidelines and practices
+
+**Security:**
+- [Security Specifications](doc/security/security-specifications.adoc) - Security requirements
+- [Threat Model](doc/security/Threat-Model.adoc) - Security threat analysis
+- [JWT Security Best Practices](doc/security/jwt-security-best-practices.adoc) - JWT handling guidelines
+
 ### Commit Messages
 
 We recommend [Conventional Commits](https://www.conventionalcommits.org/):
