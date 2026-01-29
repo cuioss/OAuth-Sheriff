@@ -8,8 +8,9 @@ on:
     tags: [ "*" ]
   workflow_dispatch:
 
-# Declare default permissions as read only
-permissions: read-all
+# Declare default permissions as read only (principle of least privilege)
+permissions:
+  contents: read
 
 # Prevent concurrent benchmark runs to avoid interference
 concurrency:
