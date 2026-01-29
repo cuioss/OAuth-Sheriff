@@ -727,11 +727,25 @@ class BenchmarkDataLoader {
 // Create global instance
 const benchmarkLoader = new BenchmarkDataLoader();
 
-// Hide 'Detailed' nav link for non-micro benchmarks (no JMH data available)
-function hideDetailedNavIfNeeded(data) {
-    if (data.metadata?.benchmarkType && !data.metadata.benchmarkType.toLowerCase().includes('micro')) {
+// Adjust navigation based on benchmark type
+function adjustNavigationForBenchmarkType(data) {
+    const benchmarkType = data.metadata?.benchmarkType?.toLowerCase() || '';
+
+    // Hide 'Detailed' nav link for non-micro benchmarks (no JMH data available)
+    if (!benchmarkType.includes('micro')) {
         const detailedLink = document.querySelector('a.nav-link[href="detailed.html"]');
         if (detailedLink) detailedLink.style.display = 'none';
+    }
+
+    // Hide the current benchmark type link (only show link to the OTHER type)
+    // On Micro pages: hide Micro link, show Integration link
+    // On Integration pages: hide Integration link, show Micro link
+    if (benchmarkType.includes('micro')) {
+        const microLink = document.querySelector('a.nav-link[href="../micro/index.html"]');
+        if (microLink) microLink.style.display = 'none';
+    } else if (benchmarkType.includes('integration')) {
+        const integrationLink = document.querySelector('a.nav-link[href="../integration/index.html"]');
+        if (integrationLink) integrationLink.style.display = 'none';
     }
 }
 
@@ -740,10 +754,10 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         const pageType = document.body.dataset.pageType || 'index';
         benchmarkLoader.updatePage(pageType);
-        benchmarkLoader.loadData().then(hideDetailedNavIfNeeded);
+        benchmarkLoader.loadData().then(adjustNavigationForBenchmarkType);
     });
 } else {
     const pageType = document.body.dataset.pageType || 'index';
     benchmarkLoader.updatePage(pageType);
-    benchmarkLoader.loadData().then(hideDetailedNavIfNeeded);
+    benchmarkLoader.loadData().then(adjustNavigationForBenchmarkType);
 }
