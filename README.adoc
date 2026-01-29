@@ -22,6 +22,8 @@ image:https://sonarcloud.io/api/project_badges/measure?project=cuioss_OAuth-Sher
 image:https://sonarcloud.io/api/project_badges/measure?project=cuioss_OAuth-Sheriff&metric=ncloc[Lines of Code,link=https://sonarcloud.io/summary/new_code?id=cuioss_OAuth-Sheriff]
 image:https://sonarcloud.io/api/project_badges/measure?project=cuioss_OAuth-Sheriff&metric=coverage[Coverage,link=https://sonarcloud.io/summary/new_code?id=cuioss_OAuth-Sheriff]
 
+image:https://www.bestpractices.dev/projects/11849/badge[OpenSSF Best Practices,link=https://www.bestpractices.dev/projects/11849]
+
 **Performance Benchmarks**
 
 image:https://github.com/cuioss/OAuth-Sheriff/actions/workflows/benchmark.yml/badge.svg[JMH Benchmarks,link=https://github.com/cuioss/OAuth-Sheriff/actions/workflows/benchmark.yml]
