@@ -29,9 +29,24 @@ Please do not report security vulnerabilities through public GitHub issues. Use 
 
 1. **Fork** the repository
 2. Create a **feature branch** (`git checkout -b feature/my-improvement`)
-3. **Commit** your changes with meaningful commit messages
-4. **Push** the branch (`git push origin feature/my-improvement`)
-5. Create a **Pull Request**
+3. **Build and verify** your changes (see below)
+4. **Commit** your changes with meaningful commit messages
+5. **Push** the branch (`git push origin feature/my-improvement`)
+6. Create a **Pull Request**
+
+### Before Committing
+
+Before committing and pushing, run these two builds and fix all issues:
+
+```bash
+# 1. Run code quality checks (checkstyle, spotbugs, PMD)
+./mvnw -Ppre-commit clean verify
+
+# 2. Run full build with all tests
+./mvnw clean install
+```
+
+Both builds must pass without errors or warnings before committing.
 
 ### Code Standards
 
