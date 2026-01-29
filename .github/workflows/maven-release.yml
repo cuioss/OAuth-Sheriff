@@ -7,10 +7,15 @@ on:
       - '.github/project.yml'
   workflow_dispatch:
 
+# Declare default permissions as read only (principle of least privilege)
+permissions: read-all
+
 jobs:
   release:
     runs-on: ubuntu-latest
     name: release
+    permissions:
+      contents: write  # Required for pushing commits and tags
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
