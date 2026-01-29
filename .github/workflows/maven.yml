@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Declare default permissions as read only (principle of least privilege)
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -10,6 +10,10 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Declare default permissions as read only (principle of least privilege)
+permissions:
+  contents: read
+
 jobs:
   claude:
     if: |
