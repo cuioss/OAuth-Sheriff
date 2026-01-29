@@ -1,4 +1,4 @@
-= oauth-sheriff-core
+= OAuth-Sheriff
 :toc: macro
 :toclevels: 3
 :toc-title: Table of Contents
