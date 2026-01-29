@@ -5,7 +5,7 @@
 # Usage: docker run --rm --network host wrk:local -t2 -c10 -d10s --latency https://example.com
 #        docker run --rm --network host wrk:local -t2 -c10 -d10s -s /scripts/health_live_check.lua https://example.com
 
-FROM alpine:3.22
+FROM alpine:3.22@sha256:55ae5d250caebc548793f321534bc6a8ef1d116f334f18f4ada1b2daad3251b2
 
 # Install WRK from Alpine community repository
 # Works on both amd64 and arm64 architectures
