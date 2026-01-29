@@ -248,15 +248,17 @@ public class ReportDataGenerator {
                 throughputValue = benchmark.getRawScore();
             }
 
-            // Extract latency: WRK benchmarks have percentiles, use P50 (median) as representative latency
-            // JMH latency benchmarks use rawScore
+            // Extract latency: Only for benchmarks that measure latency
+            // - WRK benchmarks: mode=thrpt but percentiles represent latency (fullName starts with "wrk.")
+            // - JMH latency benchmarks: mode=avgt/sample, use rawScore or percentiles
+            // - JMH throughput benchmarks: mode=thrpt, percentiles are throughput variance (NOT latency!)
             Double latencyValue = null;
-            if (benchmark.getPercentiles() != null && benchmark.getPercentiles().containsKey(P_50)) {
-                // WRK benchmarks have percentiles - use median (P50) as latency
+            if (hasLatencyPercentiles(benchmark)) {
+                // WRK benchmarks or JMH latency benchmarks with percentiles - use P50 as latency
                 latencyValue = benchmark.getPercentiles().get(P_50);
             } else if (AVERAGE_TIME.equals(benchmark.getMode()) || SAMPLE.equals(benchmark.getMode()) ||
                     (benchmark.getScoreUnit() != null && benchmark.getScoreUnit().contains(SUFFIX_OP))) {
-                // JMH latency benchmarks use rawScore
+                // JMH latency benchmarks without percentiles - use rawScore
                 latencyValue = benchmark.getRawScore();
             }
 
@@ -298,14 +300,45 @@ public class ReportDataGenerator {
         }
 
         for (BenchmarkData.Benchmark benchmark : benchmarks) {
-            // Include benchmark if it has percentile data, regardless of mode
-            // WRK benchmarks have thrpt mode but also include percentiles
-            if (benchmark.getPercentiles() != null && !benchmark.getPercentiles().isEmpty()) {
+            // Only include benchmarks with LATENCY percentiles (not throughput variance)
+            // - WRK benchmarks: fullName starts with "wrk.", percentiles = latency distribution
+            // - JMH latency benchmarks: mode=avgt/sample, percentiles = latency distribution
+            // - JMH throughput benchmarks: mode=thrpt (non-WRK), percentiles = throughput variance (EXCLUDE)
+            if (hasLatencyPercentiles(benchmark)) {
                 benchmarkNames.add(benchmark.getName());
                 List<Double> benchmarkData = extractPercentileValues(benchmark.getPercentiles(), percentileKeys);
                 dataByBenchmark.put(benchmark.getName(), benchmarkData);
             }
         }
+    }
+
+    /**
+     * Checks if a benchmark has latency percentiles (as opposed to throughput variance percentiles).
+     * <p>
+     * WRK benchmarks have mode=thrpt but their percentiles represent latency distribution.
+     * JMH throughput benchmarks have mode=thrpt but their percentiles represent throughput iteration variance.
+     * JMH latency benchmarks have mode=avgt/sample and their percentiles represent latency distribution.
+     *
+     * @param benchmark the benchmark to check
+     * @return true if the benchmark has latency percentiles
+     */
+    private boolean hasLatencyPercentiles(BenchmarkData.Benchmark benchmark) {
+        if (benchmark.getPercentiles() == null || benchmark.getPercentiles().isEmpty()) {
+            return false;
+        }
+        if (!benchmark.getPercentiles().containsKey(P_50)) {
+            return false;
+        }
+
+        // WRK benchmarks: fullName starts with "wrk." - these have latency percentiles
+        String fullName = benchmark.getFullName();
+        if (fullName != null && fullName.startsWith("wrk.")) {
+            return true;
+        }
+
+        // JMH latency benchmarks: mode is avgt or sample - these have latency percentiles
+        String mode = benchmark.getMode();
+        return AVERAGE_TIME.equals(mode) || SAMPLE.equals(mode);
     }
 
     private List<Double> extractPercentileValues(Map<String, Double> percentiles, String[] percentileKeys) {

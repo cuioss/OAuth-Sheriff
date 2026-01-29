@@ -625,6 +625,29 @@ class BenchmarkDataLoader {
     }
 
     /**
+     * Renders the trend summary text below the chart.
+     */
+    async renderTrendSummary() {
+        const data = await this.loadData();
+        const trends = data.trends || {};
+        const summaryDiv = document.querySelector('.trends-summary');
+
+        if (!summaryDiv) return;
+
+        // Add trend summary if available
+        if (trends.summary) {
+            // Check if summary paragraph already exists
+            const existingSummary = summaryDiv.querySelector('.trend-summary-text');
+            if (!existingSummary) {
+                const summaryPara = document.createElement('p');
+                summaryPara.className = 'trend-summary-text';
+                summaryPara.innerHTML = `<strong>Trend:</strong> ${trends.summary}`;
+                summaryDiv.appendChild(summaryPara);
+            }
+        }
+    }
+
+    /**
      * Loads the JMH Visualizer in an iframe
      */
     loadJMHVisualizer() {
@@ -688,6 +711,7 @@ class BenchmarkDataLoader {
                 case 'trends':
                     await this.renderOverview();
                     await this.renderChart('trends-chart', 'trends');
+                    await this.renderTrendSummary();
                     break;
                 case 'detailed':
                     await this.renderOverview();
