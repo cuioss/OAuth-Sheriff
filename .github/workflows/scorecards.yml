@@ -66,6 +66,12 @@ jobs:
           #     of the value entered here.
           publish_results: true
 
+      # Upload the results to GitHub's code scanning dashboard
+      - name: "Upload to code-scanning"
+        uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
+        with:
+          sarif_file: results.sarif
+
       # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF
       # format to the repository Actions tab.
       - name: "Upload artifact"
@@ -75,4 +81,4 @@ jobs:
           path: results.sarif
           retention-days: 5
 
-      # We use sonar-cloud to do the SATS-Testin
+      # We use sonar-cloud to do the SAST-Testing
