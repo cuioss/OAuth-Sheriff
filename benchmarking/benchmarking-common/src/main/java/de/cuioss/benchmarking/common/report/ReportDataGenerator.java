@@ -323,10 +323,7 @@ public class ReportDataGenerator {
      * @return true if the benchmark has latency percentiles
      */
     private boolean hasLatencyPercentiles(BenchmarkData.Benchmark benchmark) {
-        if (benchmark.getPercentiles() == null || benchmark.getPercentiles().isEmpty()) {
-            return false;
-        }
-        if (!benchmark.getPercentiles().containsKey(P_50)) {
+        if (benchmark.getPercentiles() == null || !benchmark.getPercentiles().containsKey(P_50)) {
             return false;
         }
 
